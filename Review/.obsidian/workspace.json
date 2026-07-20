@@ -34,6 +34,20 @@
               "icon": "lucide-file",
               "title": "A_Hash_Table_Without_Hash_Functions"
             }
+          },
+          {
+            "id": "ebbaa83cf906b681",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "动态融合节点.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "动态融合节点"
+            }
           }
         ],
         "currentTab": 1
@@ -201,8 +215,9 @@
   },
   "active": "b30b1aafb6cdea2a",
   "lastOpenFiles": [
-    "NULL.md",
+    "动态融合节点.md",
     "A_Hash_Table_Without_Hash_Functions.md",
+    "NULL.md",
     "简洁字典（succinct dictionary）.md",
     "简洁字典（succinct dictionary）",
     "证明一.md",
