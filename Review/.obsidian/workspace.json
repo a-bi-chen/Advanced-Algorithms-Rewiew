@@ -50,7 +50,7 @@
             }
           }
         ],
-        "currentTab": 1
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -213,10 +213,10 @@
       "bases:新建数据库": false
     }
   },
-  "active": "b30b1aafb6cdea2a",
+  "active": "ebbaa83cf906b681",
   "lastOpenFiles": [
-    "动态融合节点.md",
     "A_Hash_Table_Without_Hash_Functions.md",
+    "动态融合节点.md",
     "NULL.md",
     "简洁字典（succinct dictionary）.md",
     "简洁字典（succinct dictionary）",
