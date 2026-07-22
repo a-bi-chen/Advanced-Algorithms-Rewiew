@@ -21,66 +21,98 @@
 	一个核心的开放问题是是否存在一个确定性的常数时间字典
 
 # 分析旋转基数树 
-[[A_Hash_Table_Without_Hash_Functions#十一、n叉基数树（n-ary Radix Tree）*（压缩前缀树）* / 旋转基数树#使用随机性节省空间：旋转基数树(The Rotated Trie)]]
+（旋转基数树的构造背景参见 [A_Hash_Table_Without_Hash_Functions 中"使用随机性节省空间：旋转基数树"一节](A_Hash_Table_Without_Hash_Functions.md#使用随机性节省空间旋转基数树-The-Rotated-Trie)。）
 
 证明目标：以关于 $n$ 的高概率，$A$ 的每个条目负责存储来自最多 $\Delta = \text{poly}\log n$ 个不同 $A_i$ 的条目。
 
-树中共有 $O(n)$ 个球 { [[球数为什么是O(n)【补充n叉树结构】]]}。每个球 $b$ 由一个对 $(s,c) \in [m] \times [n]$ 指定，其中 $s \in [m]$ 是球的**源节点**（即包含该球的节点），$c \in [n]$ 是球的 **孩子索引**（即 $A_i$ 中 $b$ 在逻辑上存储的索引，此处，节点储存子节点的数组与全局数组的大小相等）
+树中共有 $O(n)$ 个球（球数为 $O(n)$ 的推导见[补充说明中"所以球的总数"一节](球数为什么是O(n)【补充n叉树结构】.md#所以球的总数)）。每个球 $b$ 由一个对 $(s,c) \in [m] \times [n]$ 指定，其中 $s \in [m]$ 是球的**源节点**（即包含该球的节点），$c \in [n]$ 是球的 **孩子索引**（即 $A_i$ 中 $b$ 在逻辑上存储的索引，此处，节点储存子节点的数组与全局数组的大小相等）
 
 对于 $i \in [m]$ 和 $j \in [n]$ ，令 $X_{i,j}$ 指示节点 $i$ 是否向桶 $j$ 放入一个球的 0-1 随机变量。
-设桶 $j$ 中的球数是 $Y_j$ ，根据[[桶-节点间的独立性]]可知，$Y_j$ 是独立指示随机变量之和。
+设桶 $j$ 中的球数是 $Y_j$ ，根据[桶-节点间的独立性](桶-节点间的独立性.md#为什么在节点-i-之间是独立的)可知，$Y_j$ 是独立指示随机变量之和。
 
-**原文：”$O(n)$ 个球中的每一个在桶 $j$ 中的概率是 $1/n$，所以 $E[Y_j] = O(1)$。因此，由 [[数学工具#切尔诺夫界（Chernoff Bound）]]可知，$Y_j \leq \text{poly}\log n$ 以关于 $n$ 的高概率成立。Chernoff 界实际上告诉我们 $\text{poly}\log n$ 以概率 $1/n^{\text{poly}\log n}$ 成立，因此我们甚至达到了略微亚多项式的失败概率。“**
+**原文：”$O(n)$ 个球中的每一个在桶 $j$ 中的概率是 $1/n$，所以 $E[Y_j] = O(1)$。因此，由[切尔诺夫界](数学工具.md#切尔诺夫界-Chernoff-Bound)可知，$Y_j \leq \text{poly}\log n$ 以关于 $n$ 的高概率成立。Chernoff 界实际上告诉我们 $\text{poly}\log n$ 以概率 $1/n^{\text{poly}\log n}$ 成立，因此我们甚至达到了略微亚多项式的失败概率。“**
 
 ## 计算：
 
-设 $m$ 个节点，总球数 $B = O(n)$（[[球数为什么是O(n)【补充n叉树结构】]]）。节点 $i$ 有 $b_i$ 个球，原始位置 $c_1,\ldots,c_{b_i} \in [n]$，随机旋转量 $r_i \in [n]$ 均匀选取。
+设 $m$ 个节点，总球数 $B = O(n)$（球数为 $O(n)$ 的推导见[补充说明中"所以球的总数"一节](球数为什么是O(n)【补充n叉树结构】.md#所以球的总数)）。节点 $i$ 有 $b_i$ 个球，原始位置 $c_1,\ldots,c_{b_i} \in [n]$，随机旋转量 $r_i \in [n]$ 均匀选取。
 
 ### 1. $E[Y_j] = O(1)$
 
-球落入桶 $j$ 的条件：$(c + r_i) \bmod n = j \iff r_i \equiv j - c \pmod{n}$。因 $r_i$ 均匀分布，每个球落入桶 $j$ 的概率恰为 $1/n$。
+球落入桶 $j$ 的条件：$(c + r_i) \bmod n = j \iff r_i \equiv j - c \pmod{n}$。因 $r_i$ 在 $[n]$ 上均匀分布，每个球落入桶 $j$ 的概率为 $1/n$。
 
-同一节点内 $b_i$ 个球对应 $b_i$ 个**不同**的 $r_i$ 取值（$\because$ 各 $c_k$ 两两不同 $\implies$ $j - c_k \bmod n$ 两两不同），故这些事件互斥：
-
-$$
-P(X_{i,j} = 1) = \frac{b_i}{n}, \qquad E[X_{i,j}] = \frac{b_i}{n}
-$$
+同一节点 $i$ 内 $b_i$ 个球的原始位置 $c_1,\ldots,c_{b_i}$ 两两不同，故所需的 $r_i$ 取值 $j-c_1, j-c_2, \ldots, j-c_{b_i} \pmod n$ 也两两不同——但 $r_i$ 只能取一个值，因此这些事件互斥（至多一个球落入桶 $j$）。由互斥事件概率的可加性：
 
 $$
-\implies E[Y_j] = \sum_{i=1}^{m} E[X_{i,j}] = \frac{1}{n}\sum_{i=1}^{m} b_i = \frac{B}{n} = O(1) \quad \text{（常数界记作 } c_0\text{）}
+P(X_{i,j} = 1) = \sum_{k=1}^{b_i} P(r_i \equiv j - c_k \pmod n) = \sum_{k=1}^{b_i} \frac{1}{n} = \frac{b_i}{n}
 $$
+
+$X_{i,j}$ 是 0-1 随机变量，故 $E[X_{i,j}] = 1 \cdot P(X_{i,j}=1) + 0 \cdot P(X_{i,j}=0) = b_i / n$。由期望的线性性：
+
+$$
+E[Y_j] = E\!\left[\sum_{i=1}^{m} X_{i,j}\right] = \sum_{i=1}^{m} E[X_{i,j}] = \sum_{i=1}^{m} \frac{b_i}{n} = \frac{1}{n}\sum_{i=1}^{m} b_i = \frac{B}{n}
+$$
+
+由 $B = O(n)$，存在常数 $c_0$ 使 $B \leq c_0 n$（对充分大的 $n$），故 $E[Y_j] = B/n \leq c_0 = O(1)$。记 $\mu = E[Y_j] \leq c_0$。
 
 ### 2. 套用 Chernoff 界 $\implies Y_j \leq \text{poly}\log n$
 
-由[[桶-节点间的独立性]]，各 $X_{i,j}$ 跨节点 $i$ 独立 $\implies$ $Y_j$ 是独立 Bernoulli 之和，均值 $\mu \leq c_0$。
+由[桶-节点间的独立性](桶-节点间的独立性.md#为什么在节点-i-之间是独立的)，各 $X_{i,j}$ 跨节点 $i$ 独立，故 $Y_j = \sum_{i=1}^{m} X_{i,j}$ 是独立 Bernoulli 随机变量之和，均值 $\mu \leq c_0$。
 
-取阈值 $\Delta = \log^k n$（$k>0$），令 $\delta = \Delta/\mu - 1$。设 $1+\delta = \Delta/\mu$，代入[[数学工具#定理陈述|Chernoff上尾界]]：
+取阈值 $\Delta = \log^k n$（$k>0$），令 $\delta = \Delta/\mu - 1$，则 $1+\delta = \Delta/\mu$。由 [Chernoff 上尾界](数学工具.md#定理陈述)：
+
+$$
+P(Y_j \geq \Delta) = P\big(Y_j \geq (1+\delta)\mu\big) \leq \left(\frac{e^{\delta}}{(1+\delta)^{1+\delta}}\right)^{\!\mu}
+$$
+
+代入 $\delta = \frac{\Delta}{\mu}-1$，$1+\delta = \frac{\Delta}{\mu}$，逐步化简：
 
 $$
 \begin{aligned}
-P(Y_j \geq \Delta) &\leq \left(\frac{e^{\delta}}{(1+\delta)^{1+\delta}}\right)^{\!\mu}
-= \left(\frac{e^{\Delta/\mu - 1}}{(\Delta/\mu)^{\Delta/\mu}}\right)^{\!\mu}
-= \frac{e^{\Delta - \mu}}{(\Delta/\mu)^{\Delta}} \\
-&= e^{\Delta-\mu} \cdot \left(\frac{\mu}{\Delta}\right)^{\!\Delta}
-= \exp\Big(\Delta - \mu + \Delta\ln\mu - \Delta\ln\Delta\Big) \\
-&= \exp\Big(\Delta(1 + \ln\mu - \ln\Delta) - \mu\Big)
+\left(\frac{e^{\delta}}{(1+\delta)^{1+\delta}}\right)^{\!\mu}
+= \left(\frac{e^{\frac{\Delta}{\mu}-1}}{\big(\frac{\Delta}{\mu}\big)^{\!\frac{\Delta}{\mu}}}\right)^{\!\mu}
+= \frac{e^{(\frac{\Delta}{\mu}-1)\mu}}{(\frac{\Delta}{\mu})^{\frac{\Delta}{\mu}\cdot\mu}}
+= \frac{e^{\Delta - \mu}}{(\frac{\Delta}{\mu})^{\Delta}}
+= e^{\Delta-\mu} \cdot \left(\frac{\mu}{\Delta}\right)^{\!\Delta}
 \end{aligned}
 $$
 
-现在分析指数中各项的量级：
-
-- **主导项** $-\Delta\ln\Delta$：由于 $\Delta = \log^k n$，$\ln\Delta = k\ln\log n$，该项随 $n$ 增长至 $-\infty$。
-- **次要项** $\Delta(1+\ln\mu)$ 和 $-\mu$：因为 $\mu = O(1)$（常数界），$\ln\mu$ 也为常数，故 $\Delta(1+\ln\mu) = O(\Delta)$，$\mu = O(1) \subset O(\Delta)$。
-
-因此指数可写为 $-\Delta\ln\Delta + O(\Delta)$，而 $-\Delta\ln\Delta$ 主导（因 $\ln\Delta \to \infty$）：
+写成指数形式并整理：
 
 $$
-P(Y_j \geq \Delta) \leq \exp\Big(-\Delta\ln\Delta + O(\Delta)\Big)
-= \exp\Big(-\Omega(\Delta\ln\Delta)\Big)
-= \exp\Big(-\Omega(\log^k n \cdot \log\log n)\Big)
+\begin{aligned}
+e^{\Delta-\mu} \cdot \left(\frac{\mu}{\Delta}\right)^{\!\Delta}
+= \exp\!\Big(\Delta - \mu + \Delta(\ln\mu - \ln\Delta)\Big) 
+= \exp\!\Big(\Delta(1 + \ln\mu - \ln\Delta) - \mu\Big)
+\end{aligned}
 $$
 
-即：
+因此：
+
+$$
+P(Y_j \geq \Delta) \leq \exp\!\Big(\Delta(1 + \ln\mu - \ln\Delta) - \mu\Big)
+$$
+
+现在分析指数 $E = \Delta(1 + \ln\mu - \ln\Delta) - \mu$ 中各项的量级。$-\Delta\ln\Delta = -\log^k n \cdot k\ln\log n \to -\infty$（主导项）；由 $\mu = O(1)$ 知 $\Delta(1+\ln\mu) = O(\Delta)$，$\mu = O(1) \subset O(\Delta)$。因此：
+
+$$
+E = -\Delta\ln\Delta + O(\Delta)
+$$
+
+由于 $\ln\Delta = k\ln\log n \to \infty$，$|-\Delta\ln\Delta| / |O(\Delta)| = \Theta(\ln\log n) \to \infty$，故 $-\Delta\ln\Delta$ 主导：
+
+$$
+E = -\Omega(\Delta\ln\Delta)
+$$
+
+> **$\pmb{\Omega}$ 注释**：$\Omega(f(n))$ 表示"至少是 $f(n)$ 的常数倍"，即存在常数 $c > 0$，使对充分大的 $n$ 有 $g(n) \geq c \cdot f(n)$。此处 $-\Delta\ln\Delta + O(\Delta) = -\Omega(\Delta\ln\Delta)$ 的含义是：存在 $c > 0$，使 $-\Delta\ln\Delta + O(\Delta) \leq -c \cdot \Delta\ln\Delta$。即指数以**至少** $c \cdot \Delta\ln\Delta$ 的速率趋于 $-\infty$。$\Omega$ 吸收了低阶项 $O(\Delta)$ 和所有常数因子。
+
+于是：
+
+$$
+P(Y_j \geq \Delta) \leq \exp\!\Big(-\Omega(\Delta\ln\Delta)\Big) = \exp\!\Big(-\Omega(\log^k n \cdot \log\log n)\Big)
+$$
+
+换用 2 为底数（$\exp(x) = 2^{x/\ln 2}$，常数因子被 $\Omega$ 吸收）：
 
 $$
 \boxed{P\big(Y_j \geq \text{poly}\log n\big) \leq 1\,/\,2^{\Omega(\text{poly}\log n)}}
@@ -88,25 +120,31 @@ $$
 
 ### 3. Union Bound $\implies$ 全局成立
 
-全局共 $n$ 个桶，由 Union Bound（$P(\exists j \in [n]: Y_j \geq \Delta) \leq \sum_{j=1}^n P(Y_j \geq \Delta)$）：
+全局共 $n$ 个桶，由 Union Bound：
 
 $$
-P\big(\exists j \in [n]: Y_j \geq \Delta\big) \leq n \cdot \frac{1}{2^{\Omega(\log^k n)}} = \frac{n}{2^{\Omega(\log^k n)}}
+P\big(\exists j \in [n]: Y_j \geq \Delta\big) \leq \sum_{j=1}^{n} P(Y_j \geq \Delta) \leq \frac{n}{2^{\Omega(\log^k n)}}
 $$
 
-将分子 $n$ 写为 $2^{\log n}$：
+将 $n = 2^{\log n}$ 代入：
 
 $$
-\frac{n}{2^{\Omega(\log^k n)}} = 2^{\log n - \Omega(\log^k n)}
+\frac{n}{2^{\Omega(\log^k n)}} = \frac{2^{\log n}}{2^{\Omega(\log^k n)}} = 2^{\log n - \Omega(\log^k n)}
 $$
 
-因为 $k > 1$ 时 $\log^k n$ 比 $\log n$ 增长更快，对充分大的 $n$ 有 $\log^k n \geq 2\log n$，因此指数 $\log n - \Omega(\log^k n) \leq -\Omega(\log^k n)$（常数因子被 $\Omega$ 吸收），于是：
+当 $k > 1$ 时 $\log^k n$ 比 $\log n$ 增长更快；$k=1$ 时取 $\Omega$ 隐含常数 $c \geq 2$ 仍有 $\log n - c\log n \leq -\frac{c}{2}\log n = -\Omega(\log n)$。故对充分大的 $n$，$\log n - \Omega(\log^k n) = -\Omega(\log^k n)$。于是：
 
 $$
-2^{\log n - \Omega(\log^k n)} = 2^{-\Omega(\log^k n)} = \frac{1}{2^{\Omega(\log^k n)}} = \frac{1}{n^{\Omega(\log^{k-1} n)}}
+2^{\log n - \Omega(\log^k n)} = 2^{-\Omega(\log^k n)} = \frac{1}{2^{\Omega(\log^k n)}}
 $$
 
-最终：
+换底 $n$（$2^A = (2^{\log n})^{A / \log n} = n^{A / \log n}$）：
+
+$$
+\frac{1}{2^{\Omega(\log^k n)}} = \frac{1}{n^{\Omega(\log^k n) / \log n}} = \frac{1}{n^{\Omega(\log^{k-1} n)}}
+$$
+
+其中 $\frac{\Omega(\log^k n)}{\log n} = \Omega(\log^{k-1} n)$（$\frac{c \cdot \log^k n}{\log n} = c \cdot \log^{k-1} n$）。由于 $k$ 可取任意大的常数，$\Omega(\log^{k-1} n)$ 是 $\log n$ 的任意次幂——即 $\text{poly}\log n$：
 
 $$
 \boxed{P\big(\exists j: Y_j \geq \text{poly}\log n\big) \leq 1\,/\,n^{\text{poly}\log n}}
@@ -117,4 +155,4 @@ $$
 
 # 放大旋转基数树(The Ampliﬁed Rotated Trie)
 
->**目标**：修改旋转基数树，将其失败概率（即给定操作需要超常数时间的概率）降低到 $1/n^{n^{1-\varepsilon}}$ ，其中，$\varepsilon$ 是我们选择的一个正常数，我们将这个新的数据结构称为**放大旋转基数树**。
+
