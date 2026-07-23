@@ -14,6 +14,7 @@
 6. 在讨论基数树时，我们将数组 $A_1,A_2,...,A_m$ 称为**节点**（或有时称为**内部节点** ），并将每一个 $A_i$ 的非空条目 (即包含指针的条目) 称为**球**（balls）
 7.  "删除"操作：并不对数据进行物理上的抹除，而是将待删除的数据标记为已删除
 8. 初始化数据结构：随机旋量 $r_i$ 可以延迟初始化，使得 $r_i$ 在节点 $i$ 第一次使用时才产生。。此外，我们实际上不必支付初始化任何数组的 成本，因为我们可以使用标准技术在常数时间内模拟零初始化的数组。因此，我们的旋转基数树可以在常数时间内初始化。  *//此处原文引用了论文来讨论常数时间初始化问题，但我认为与本文需要证明的内容关联性不大，故不对引用论文进行分析讨论，在此仅作为一个结论：可以在常数时间内初始化一个旋转基数树*
+9. $\ell = \text{ploy}\log n$ ~~（因为第四节直接用到了）~~~
 
 
 
@@ -25,7 +26,7 @@
 
 证明目标：以关于 $n$ 的高概率，$A$ 的每个条目负责存储来自最多 $\Delta = \text{poly}\log n$ 个不同 $A_i$ 的条目。
 
-树中共有 $O(n)$ 个球（球数为 $O(n)$ 的推导见[补充说明中"所以球的总数"一节](球数为什么是O(n)【补充n叉树结构】.md#所以球的总数)）。每个球 $b$ 由一个对 $(s,c) \in [m] \times [n]$ 指定，其中 $s \in [m]$ 是球的**源节点**（即包含该球的节点），$c \in [n]$ 是球的 **孩子索引**（即 $A_i$ 中 $b$ 在逻辑上存储的索引，此处，节点储存子节点的数组与全局数组的大小相等）
+树中共有[O(n)个球](球数为什么是O(n)【补充n叉树结构】.md#所以球的总数)。每个球 $b$ 由一个对 $(s,c) \in [m] \times [n]$ 指定，其中 $s \in [m]$ 是球的**源节点**（即包含该球的节点），$c \in [n]$ 是球的 **孩子索引**（即 $A_i$ 中 $b$ 在逻辑上存储的索引，此处，节点储存子节点的数组与全局数组的大小相等）
 
 对于 $i \in [m]$ 和 $j \in [n]$ ，令 $X_{i,j}$ 指示节点 $i$ 是否向桶 $j$ 放入一个球的 0-1 随机变量。
 设桶 $j$ 中的球数是 $Y_j$ ，根据[桶-节点间的独立性](桶-节点间的独立性.md#为什么在节点-i-之间是独立的)可知，$Y_j$ 是独立指示随机变量之和。
@@ -34,7 +35,7 @@
 
 ## 计算：
 
-设 $m$ 个节点，总球数 $B = O(n)$（球数为 $O(n)$ 的推导见[补充说明中"所以球的总数"一节](球数为什么是O(n)【补充n叉树结构】.md#所以球的总数)）。节点 $i$ 有 $b_i$ 个球，原始位置 $c_1,\ldots,c_{b_i} \in [n]$，随机旋转量 $r_i \in [n]$ 均匀选取。
+设 $m$ 个节点，总球数 $B = O(n)$ 。节点 $i$ 有 $b_i$ 个球，原始位置 $c_1,\ldots,c_{b_i} \in [n]$，随机旋转量 $r_i \in [n]$ 均匀选取。
 
 ### 1. $E[Y_j] = O(1)$
 
@@ -156,3 +157,93 @@ $$
 # 放大旋转基数树(The Ampliﬁed Rotated Trie)
 
 
+为了严格证明该数据结构在最坏的情况下的空间消耗上界是线性的，我们必须证明（[为什么？](线性空间以及概率与不等式的关系.md)）：
+$$
+Pr[q>=n^{1-\varepsilon}] \leq O(1/n^{n^{1-\varepsilon}})
+$$
+## 界定溢出球的数量：
+
+### 约定：
+
+- $\Delta = \text{poly}\log n$ 为每个桶的容量。
+- 扇出降至 $n^\delta$（$\delta > 0$ 常数），每个内部节点至多 $n^\delta$ 个球，内部节点数 $m \geq n^{1-\delta}$。
+- 球 $(s,c)$ 落入桶 $\phi(s,c) = (r_s + c) \bmod n$（$s \in [m]$ 为源节点，$c \in [n^\delta]$ 为孩子索引，$r_s \in [n]$ 均匀选取）。
+- 桶满（$\geq \Delta$ 个球）后，新增球进入辅助 $n^\delta$ 叉基数树，称为**溢出球**。$Q$ 空间 $\propto q \cdot n^\delta$，故必须证明（[线性空间约束](线性空间以及概率与不等式的关系.md)）
+---
+
+### 计算：
+
+设总球数 $B = O(n)$。令 $q = f(r_1, \ldots, r_m)$ 为溢出球总数。$q$ 不是独立随机变量之和（同一源节点的球共享 $r_s$），无法直接用 Chernoff 界，转而使用 [McDiarmid 不等式](数学工具.md#McDiarmid-不等式McDiarmids-Inequality)。
+
+#### 1. 有界差分常数
+
+改变单个旋量 $r_s$，至多影响源节点 $s$ 内的 $n^\delta$ 个球——它们集体换桶，最坏情况下全部改变溢出状态。故 $f$ 满足 $n^\delta$-[有界差分条件](数学工具.md#有界差分条件)：
+
+$$
+L = n^\delta
+$$
+
+> **$L$ 的作用**：McDiarmid 的指数为 $2t^2/(mL^2)$，$L$ 在分母上取平方——$L$ 越小，集中越强。若扇出仍为 $n$，则 $L = n$，指数 $\sim n^{1-2\varepsilon} / n^2 = n^{-1-2\varepsilon} \to 0$，界是平凡的。将扇出压至 $n^\delta$ 后 $L = n^\delta$，指数 $\sim n^{1-2\varepsilon-2\delta}$，取 $\delta = \varepsilon/5$ 即得正的 $n$ 的幂次——这是放大旋转基数树能将失败概率压至双指数级小的根本原因。
+
+#### 2. $\mathbb{E}[q]$ 的估计
+
+由[第 3 节 Chernoff 分析](#计算)，单个桶 $j$ 球数超限的概率：
+
+$$
+P(Y_j \geq \Delta) \leq 1\,/\,2^{\Omega(\text{poly}\log n)}
+$$
+
+记 $\mathcal{O}_j$ 为桶 $j$ 的溢出球数。$\mathcal{O}_j \leq Y_j$，且仅当 $Y_j > \Delta$ 时非零。最坏情况下 $Y_j \leq O(n)$，故：
+
+$$
+\mathbb{E}[\mathcal{O}_j] \leq O(n) \cdot P(Y_j \geq \Delta) \leq \frac{O(n)}{2^{\Omega(\text{poly}\log n)}} = \frac{1}{2^{\Omega(\text{poly}\log n)}}
+$$
+
+对 $n$ 个桶求和：
+
+$$
+\boxed{\mathbb{E}[q] = \sum_{j=1}^{n} \mathbb{E}[\mathcal{O}_j] \leq \frac{n}{2^{\Omega(\text{poly}\log n)}} = \frac{n}{\text{poly } n} \ll n^{1-\varepsilon}}
+$$
+
+#### 3. 代入 McDiarmid
+
+由 [McDiarmid 单侧界](数学工具.md#定理陈述)，取 $t = n^{1-\varepsilon} - \mathbb{E}[q]$。$\mathbb{E}[q] \ll n^{1-\varepsilon}$，故 $t = \Theta(n^{1-\varepsilon})$。代入 $m \leq B = O(n)$、$L = n^\delta$：
+
+$$
+\begin{aligned}
+\Pr[q \geq n^{1-\varepsilon}]
+\leq \exp\!\left(-\frac{2\big(n^{1-\varepsilon} - \mathbb{E}[q]\big)^2}{m \cdot L^2}\right) = \exp\!\left(-\Omega\!\left(\frac{n^{2-2\varepsilon}}{n \cdot n^{2\delta}}\right)\right) = \exp\!\left(-\Omega\!\left(n^{\,1 - 2\varepsilon - 2\delta}\right)\right)
+\end{aligned}
+$$
+
+#### 4. 参数选取与最终形式
+
+指数 $1 - 2\varepsilon - 2\delta$ 必须为正。取 $\delta = \varepsilon / 5$（原文设定）：
+
+$$
+1 - 2\varepsilon - 2\cdot\frac{\varepsilon}{5} = 1 - 2.4\varepsilon
+$$
+
+$\varepsilon < 1/2.4$ 时指数为正，更精细的分析可将 $\varepsilon$ 推至任意正常数。于是：
+
+$$
+\Pr[q \geq n^{1-\varepsilon}] \leq \exp\!\left(-\Omega\!\left(n^{\,1 - O(\varepsilon)}\right)\right)
+$$
+
+换底（$\exp(x) = n^{x / \ln n}$，$\ln n = \Theta(\log n)$）：
+
+$$
+\exp\!\left(-\Omega(n^{1-O(\varepsilon)})\right) = n^{-\Omega(n^{1-O(\varepsilon)} / \log n)} = n^{-\Omega(n^{1-\varepsilon})}
+$$
+
+调整 $\varepsilon$ 即得目标形式：
+
+$$
+\boxed{\Pr[q \geq n^{1-\varepsilon}] \leq O\!\left(1 / n^{\,n^{1-\varepsilon}}\right)}
+$$
+
+---
+
+### 总结：
+
+$(★)$ 式成立。$Q$ 的空间以极高概率维持在 $O(n^{1-\varepsilon} \cdot n^\delta) = O(n^{1-\varepsilon+\delta}) \subset O(n)$，整体字典保持线性空间。关键：McDiarmid 的指数含 $n$ 的正幂次（$\Omega(n^{1-O(\varepsilon)})$），远大于第 3 节 Chernoff 给出的 $\text{poly}\log n$ 级别，将失败概率从亚多项式推至双指数级小。
