@@ -11,10 +11,14 @@
             "id": "3588bea48a36899f",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Rewiew(Root).md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "新标签页"
+              "title": "Rewiew(Root)"
             }
           }
         ]
@@ -183,8 +187,9 @@
   "active": "3588bea48a36899f",
   "lastOpenFiles": [
     "A_Hash_Table_Without_Hash_Functions.md",
-    "NULL.md",
+    "Rewiew(Root).md",
     "随机旋量全为0以及溢出球过量问题.md",
+    "NULL.md",
     "桶-节点间的独立性.md",
     "NULL.md.tmp.19532.1e005ab35ec3",
     "NULL.md.tmp.19532.6ce1d1ac8325",
