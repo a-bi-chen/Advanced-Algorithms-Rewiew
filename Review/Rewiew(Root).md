@@ -20,8 +20,12 @@
 
 ## n叉基数树与旋转基数树(第3节)
 
+将 $n$ 叉基数树的每个内部节点数组 $A_i$ 分配随机旋量 $r_i \in [n]$，旋转后折叠进大小为 $n$ 的全局数组 $A$。每个桶 $A[j]$ 用动态融合节点存储来自不同源节点的指针。核心证明：以高概率每个桶承载不超过 $\Delta = \text{polylog } n$ 个球——用 Chernoff 界得单桶失败概率 $1/2^{\Omega(\text{poly}\log n)}$，Union bound 压到全局 $1/n^{\text{poly}\log n}$。详见 [[NULL#分析旋转基数树]] 和 [[A_Hash_Table_Without_Hash_Functions]]
+
 ## 放大旋转基数树(第4节)
 *The Ampliﬁed Rotated Trie*
+
+将失败概率从第 3 节的 $1/2^{\text{poly}\log n}$ 进一步压到 $1/n^{n^{1-\varepsilon}}$（双指数级小）。核心思路：将扇出从 $n$ 降至 $n^\delta$，使内部节点数增至 $n^{1-\delta}$，从而增加独立随机比特、削弱球间依赖。此时单个旋量至多影响 $n^\delta$ 个球（有界差分常数 $L=n^\delta$），配合 McDiarmid 不等式得到 $n$ 的正幂次集中指数，最终将失败概率压至双指数级。详见 [[NULL#放大旋转基数树]]
 
 ## 预算旋转基数树(第5节)
 *The Budget Rotated Trie*
