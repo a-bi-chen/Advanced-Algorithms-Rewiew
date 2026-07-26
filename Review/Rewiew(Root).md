@@ -26,6 +26,8 @@
 ## 预算旋转基数树(第5节)
 *The Budget Rotated Trie*
 
+将随机比特从 $O(n\log n)$ 压缩到 $\tilde{O}(\log n)$，同时维持 $1/\text{poly}(n)$ 失败概率和 $O(1)$ 操作时间。核心思路：控制内部节点数量 → 拆开桶映射（$a_s$ 管组、$b_s$ 管桶内位置）→ 用 $k$ 独立哈希和负载均衡哈希分别生成 $a_i$ 和 $b_i$。引理 6 证明 $\tilde{O}(\log n)$ 是最优的。详见 [[预算旋转基数树]]
+
 ## 实现简洁性(第6节)
 *Achieving Succinctness*
 
