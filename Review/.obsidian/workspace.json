@@ -13,44 +13,15 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Rewiew(Root).md",
+                "file": "A_Hash_Table_Without_Hash_Functions.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Rewiew(Root)"
-            }
-          },
-          {
-            "id": "1332b7cb204ccd0e",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "NULL.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "NULL"
-            }
-          },
-          {
-            "id": "ed17eec8a381d89c",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "NULL.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "NULL"
+              "title": "A_Hash_Table_Without_Hash_Functions"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -107,7 +78,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "dc16be1d828d37e4",
@@ -212,20 +184,26 @@
       "bases:新建数据库": false
     }
   },
-  "active": "1332b7cb204ccd0e",
+  "active": "3588bea48a36899f",
   "lastOpenFiles": [
+    "附录A.md",
     "A_Hash_Table_Without_Hash_Functions.md",
-    "线性空间以及概率与不等式的关系.md",
-    "NULL.md",
     "Rewiew(Root).md",
+    "NULL.md",
     "动态融合节点.md",
-    "随机旋量全为0以及溢出球过量问题.md",
+    "减少依赖关系的原理.md",
+    "球数为什么是O(n)【补充n叉树结构】.md",
+    "数学工具.md",
+    "预算旋转基数树.md",
     "桶-节点间的独立性.md",
+    "线性空间以及概率与不等式的关系.md",
+    "随机旋量全为0以及溢出球过量问题.md",
+    "实现简洁性.md",
+    "附录A-全空间归约.md",
     "NULL.md.tmp.19532.1e005ab35ec3",
     "NULL.md.tmp.19532.6ce1d1ac8325",
     "NULL.md.tmp.19532.a006169f6468",
     "NULL.md.tmp.19532.6b47526936b3",
-    "数学工具.md",
     "NULL.md.tmp.19532.4d4a064686ab",
     "NULL.md.tmp.19532.f8a615de1d68",
     "NULL.md.tmp.19532.4bf573a4925c",
@@ -233,8 +211,6 @@
     "NULL.md.tmp.19532.f490a4f44450",
     "NULL.md.tmp.19532.839fe9f1875b",
     "第 3 节 Chernoff 分析.md",
-    "球数为什么是O(n)【补充n叉树结构】.md",
-    "减少依赖关系的原理.md",
     "().md",
     "桶/节点间的独立性.md",
     "简洁字典（succinct dictionary）.md",

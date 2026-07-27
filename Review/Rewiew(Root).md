@@ -20,22 +20,22 @@
 
 ## n叉基数树与旋转基数树(第3节)
 
-将 $n$ 叉基数树的每个内部节点数组 $A_i$ 分配随机旋量 $r_i \in [n]$，旋转后折叠进大小为 $n$ 的全局数组 $A$。每个桶 $A[j]$ 用动态融合节点存储来自不同源节点的指针。核心证明：以高概率每个桶承载不超过 $\Delta = \text{polylog } n$ 个球——用 Chernoff 界得单桶失败概率 $1/2^{\Omega(\text{poly}\log n)}$，Union bound 压到全局 $1/n^{\text{poly}\log n}$。详见 [[NULL#分析旋转基数树]] 和 [[A_Hash_Table_Without_Hash_Functions]]
+
 
 ## 放大旋转基数树(第4节)
 *The Ampliﬁed Rotated Trie*
 
-将失败概率从第 3 节的 $1/2^{\text{poly}\log n}$ 进一步压到 $1/n^{n^{1-\varepsilon}}$（双指数级小）。核心思路：将扇出从 $n$ 降至 $n^\delta$，使内部节点数增至 $n^{1-\delta}$，从而增加独立随机比特、削弱球间依赖。此时单个旋量至多影响 $n^\delta$ 个球（有界差分常数 $L=n^\delta$），配合 McDiarmid 不等式得到 $n$ 的正幂次集中指数，最终将失败概率压至双指数级。详见 [[NULL#放大旋转基数树]]
+
 
 ## 预算旋转基数树(第5节)
 *The Budget Rotated Trie*
 
-将随机比特从 $O(n\log n)$ 压缩到 $\tilde{O}(\log n)$，同时维持 $1/\text{poly}(n)$ 失败概率和 $O(1)$ 操作时间。核心思路：控制内部节点数量 → 拆开桶映射（$a_s$ 管组、$b_s$ 管桶内位置）→ 用 $k$ 独立哈希和负载均衡哈希分别生成 $a_i$ 和 $b_i$。引理 6 证明 $\tilde{O}(\log n)$ 是最优的。详见 [[预算旋转基数树]]
+
 
 ## 实现简洁性(第6节)
 *Achieving Succinctness*
 
-将前几节的字典变为简洁字典（空间达信息论下界附近）。给出一个黑盒变换：借助 Raman-Rao 归约（定理 10）把大字典拆成多集合问题，每个小集合用骨架+存储数组表示，骨架内部以预算旋转基数树实现；通过按骨架大小分组共享随机比特，失败元素丢入后花园 $T$，Chernoff 界证明 $T$ 很小。定理 7 给出通用变换，推论 8/9 分别得到双指数失败和 $\tilde{O}(\log n)$ 随机比特的简洁字典。详见 [[实现简洁性]]
+
 
 ## 附录A：使用 $O(\log n)$ 随机比特的全空间归约(第7节)
 *A Appendix: Universe Reduction Using $O(\log n)$ Random Bits*
