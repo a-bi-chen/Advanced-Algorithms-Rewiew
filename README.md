@@ -1,6 +1,6 @@
 # 高级算法论文分析
 
-> **小组**：高嘉程（Allen-Ga）、马海川（mahaichuan）、陈玉熙（a-bi-chen）
+> **小组**：高嘉程（Allen-Ga）、马海川（weijige7）、陈玉熙（a-bi-chen）
 
 ---
 

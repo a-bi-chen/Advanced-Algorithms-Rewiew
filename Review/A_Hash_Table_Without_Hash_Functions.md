@@ -236,6 +236,6 @@ Pr[q \geq \Omega(n)] \geq 1/2^{\text{poly}\log n}$$
 ---
 
 ## 三、预算旋转基数树(The Budget Rotated Trie)
-*仅使用 $O(\log n \log\log n)$ 随机比特字典，同时保证每个操作以概率 $1-1/\text{poly}(n)$ (即以关于 $n$ 的高概率) 在常数时间内完成*
+*仅使用 $O(\log n \log\log n)$ 随机比特的字典，同时保证每个操作以概率 $1-1/\text{poly}(n)$ (即以关于 $n$ 的高概率) 在常数时间内完成*
 
-在[[附录A]]中将进一步扩展预算旋转基数树，以支持 $\Theta(\log n)$ 比特的键，同时仍仅使用 $O(\log n \log\log n)$ 比特是随机性
+在[[附录A]]中将进一步扩展预算旋转基数树，以支持 $\Theta(\log n)$ 比特的键，同时仍仅使用 $O(\log n \log\log n)$ 的随机比特
