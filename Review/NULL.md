@@ -449,4 +449,4 @@ $Q$ 的空间以极高概率维持在 $O(n^{1-\varepsilon} \cdot n^\delta) = O(n
 - 哈希表在 $O(n)$ 操作上总耗时 $O(n)$ → 使用随机比特 $\le O(nw) = O(n\log n)$
 - 故确定性字典可在线性空间内硬编码这些随机比特
 
-$$\boxed{\text{存在确定性线性空间常数时间字典，失败概率} \le 1/n^{n^\varepsilon}}\quad\square$$
+$$\boxed{\text{存在确定性线性空间常数时间字典，失败概率} \le 1/n^{n^\varepsilon}}\quad$$
