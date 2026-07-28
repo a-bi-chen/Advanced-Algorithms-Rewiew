@@ -1,0 +1,772 @@
+% !TEX program = xelatex
+\documentclass[11pt,a4paper]{ctexart}
+
+% === Packages ===
+\usepackage{fullpage}
+\usepackage{amssymb,amsmath,amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue
+}
+\usepackage{graphicx}
+
+% === Custom Math Commands ===
+% Bit symbols
+\newcommand{\tto}{\text{0}}
+\newcommand{\ttl}{\text{1}}
+\newcommand{\ttq}{\text{?}}
+
+% Field extraction: \lpiece{x}{i}{f} -> <x>_i^f
+\newcommand{\lpiece}[3]{\langle #1 \rangle_{#2}^{#3}}
+\newcommand{\lpieceq}[2]{\langle #1 \rangle_{#2}}
+
+% Bit operations
+\newcommand{\AND}{\land}
+\newcommand{\OR}{\lor}
+\newcommand{\XOR}{\oplus}
+\newcommand{\NOT}{\lnot}
+\newcommand{\LSHIFT}{\ll}
+\newcommand{\RSHIFT}{\gg}
+
+% Function names
+\newcommand{\MSB}{\text{msb}}
+\newcommand{\LSB}{\text{lsb}}
+\newcommand{\RANK}{\text{rank}}
+\newcommand{\MATCH}{\text{match}}
+\newcommand{\SELECT}{\text{select}}
+\newcommand{\PRED}{\text{predecessor}}
+\newcommand{\SUCC}{\text{successor}}
+\newcommand{\RANKOP}{\text{rank}}
+
+% Math operators
+\newcommand{\floor}[1]{\lfloor #1 \rfloor}
+\newcommand{\ceiling}[1]{\lceil #1 \rceil}
+\newcommand{\lgop}{\lg}
+
+% Set notation
+\newcommand{\setadd}[1]{\cup \{ #1 \}}
+
+% Proof box
+\newcommand{\qed}{\hspace{1em}\hfill\rule{.5em}{.5em}}
+
+% === Theorem Environments ===
+\newtheorem{lemma}{引理}[section]
+\newtheorem{observation}[lemma]{观察}
+\newtheorem{proposition}[lemma]{命题}
+\newtheorem{theorem}[lemma]{定理}
+\newtheorem{fact}[lemma]{事实}
+\newtheorem{corollary}[lemma]{推论}
+\newtheorem{definition}[lemma]{定义}
+\newtheorem{remark}[lemma]{注记}
+\newtheorem{claim}{断言}[lemma]
+\renewcommand{\theclaim}{\thelemma\Alph{claim}}
+
+% Proof environment
+\newenvironment{proofsk}{{\bf 证明（概要）:}}{\qed}
+
+% === Title Information ===
+\title{动态整数集合的最优排名、选择与前驱搜索\footnote{本文以不同格式发表在 {\em Proceedings of the 55nd IEEE Symposium on Foundations of Computer Science (FOCS)}, 2014, pp.~166--175.}}
+\author{Mihai P\u{a}tra\c{s}cu\footnote{于2012年去世。} \and Mikkel Thorup\footnote{研究部分由丹麦独立研究委员会根据 Sapere Aude 研究职业计划的高级资助金支持。}\\[2ex]
+哥本哈根大学}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+我们提出了一种数据结构，用于在 $w$-位字 RAM 上表示一个 $w$-位整数的动态集合 $S$。当 $|S|=n$，$w \geq \log n$，且空间为 $O(n)$ 时，我们在 $O(\log n / \log w)$ 时间内支持以下标准操作：
+\begin{itemize}
+\item \textbf{insert}$(x)$：设置 $S = S \cup \{x\}$。
+\item \textbf{delete}$(x)$：设置 $S = S \setminus \{x\}$。
+\item \textbf{predecessor}$(x)$：返回 $\max\{y \in S \mid y < x\}$。
+\item \textbf{successor}$(x)$：返回 $\min\{y \in S \mid y \geq x\}$。
+\item \textbf{rank}$(x)$：返回 $\#\{y \in S \mid y < x\}$。
+\item \textbf{select}$(i)$：返回 $y \in S$ 使得 $\RANKOP(y)=i$（若存在）。
+\end{itemize}
+我们的 $O(\log n / \log w)$ 界对于动态排名和选择是最优的，匹配了 Fredman 和 Saks [STOC'89] 的下界。当字长较大时，我们的时间界对于动态前驱搜索也是最优的，匹配了 Beame 和 Fich [STOC'99] 的静态下界（当 $\log n / \log w = O(\log w / \log\log w)$ 时）。
+
+从技术角度看，我们的数据结构最有趣之处在于：对于规模为 $n = w^{O(1)}$ 的集合，所有操作都可在常数时间内完成。这解决了 Ajtai、Komlos 和 Fredman [FOCS'83] 提出的一个主要开放问题。Ajtai 等人曾在 Yao 的抽象 cell-probe 模型中给出了这样一种数据结构（$w$-位 cell/字），但指出所使用的函数无法被实现。作为部分解决方案，Fredman 和 Willard [STOC'90] 引入了\textbf{融合节点（fusion node）}，可以在常数时间内处理查询，但更新需要多项式时间。尽管更新效率低下，这仍然使他们获得了排序和动态前驱搜索的第一个亚对数界。我们将我们的小集合数据结构称为\textbf{动态融合节点（dynamic fusion node）}，因为它能在常数时间内同时完成查询和更新。
+\end{abstract}
+
+% ======================================================================
+\section{引言}
+% ======================================================================
+
+我们考虑表示一个整数键的动态集合 $S$ 的问题，以高效支持以下标准操作：
+\begin{itemize}
+\item \textbf{insert}$(x)$：设置 $S = S \cup \{x\}$。
+\item \textbf{delete}$(x)$：设置 $S = S \setminus \{x\}$。
+\item \textbf{member}$(x)$：返回 $[x \in S]$。
+\item \textbf{predecessor}$(x)$：返回 $\max\{y \in S \mid y < x\}$。
+\item \textbf{successor}$(x)$：返回 $\min\{y \in S \mid y \geq x\}$（也可以要求 $y > x$，但那样会使得与 rank/select 的联系不够优雅）。
+\item \textbf{rank}$(x)$：返回 $\#\{y \in S \mid y < x\}$。
+\item \textbf{select}$(i)$：返回 $y \in S$ 使得 $\RANKOP(y)=i$（若存在）。此时 $\PRED(x)=\SELECT(\RANK(x)-1)$ 且 $\SUCC(x)=\SELECT(\RANK(x))$。
+\end{itemize}
+
+我们的主要结果是一个确定性的线性空间数据结构，支持上述所有操作，时间复杂度为 $O(\log n/\log w)$，其中 $n = |S|$ 是集合大小，$w$ 是字长。这是在\textbf{字 RAM（word RAM）}模型上的结果，该模型模拟了可以在 C 语言~\cite{KR78} 中实现的操作。字操作在常数时间内完成。字长 $w$（以位为单位）是该模型的统一参数。考虑的所有整数都假定可以放入一个字中，并且当 $|S|=n$ 时，我们假设 $w \geq \log n$，这样我们至少可以对 $S$ 中的元素进行索引。字 RAM 的随机访问内存意味着我们可以分配字的表或数组，利用可以从键计算出的索引在常数时间内访问条目。这一特性被用于许多经典算法，例如基数排序~\cite{Com29} 和哈希表~\cite{Dum56}。
+
+统一的字长并不是原始 RAM 模型~\cite{CookR73} 的一部分。然而，真实的 CPU 被调优为在特定大小 $w$ 的字和寄存器上工作（有时有两种大小，例如 32 位和 64 位寄存器）。访问更小的单元（例如位）代价更高，因为它们需要从字中提取。另一方面，如果字长不受限制，我们可以使用字操作来编码大规模并行的向量操作，除非我们对可用操作施加人为限制~\cite{PS82}。有限的字长等价于``多项式宇宙''的限制——所有使用的整数都被问题规模与输入整数之和的一个多项式所界定。这类限制出现在 Yao 的 cell-probe 模型~\cite{yao81tables} 以及 Kirkpatrick 和 Reisch 的整数排序~\cite{KR84} 中。Fredman 和 Willard~\cite{fredman93fusion} 在他们的开创性 $O(n\log n/\log\log n) = o(n\log n)$ 排序算法中将字长显式地作为参数。
+
+我们的 $O(\log n/\log w)$ 界对于动态 rank 和 select 是最优的，匹配了 Fredman 和 Saks~\cite{fredman89cellprobe} 的下界。\footnote{关于 rank，参见~\cite{fredman89cellprobe} 中的 Theorem 3 及 Theorem 4 之后的注记。select 的下界通过本文将要给出的另一个简单归约得到。} 该下界是在 Yao 的 cell-probe 模型~\cite{yao81tables} 中的下界，我们只对探测内存中的 cell/字付费。该下界是针对查询时间的，即使在多项式对数的更新时间下也成立。可以想象，使用常数更新时间可以达到相同的查询时间。我们的最优性是对包括查询和更新在内的最大操作时间而言的。
+
+当字长较大时，我们的时间界对于动态前驱也是最优的，匹配了 Beame 和 Fich~\cite{beame02pred} 的 cell-probe 下界（当 $\log n/\log w = O(\log w/\log\log w)$ 时）。该下界是针对静态情况下使用任意多项式空间表示集合 $S$ 的查询时间。与 rank 和 select 相比，前驱在字长较小时有更快的解决方案，例如 van Emde Boas 的~\cite{vEB77pred} $O(\log w)$ 时间界。如果我们允许随机化，较小字长的前驱搜索界已经基本被理解，而我们的新界完善了动态前驱搜索的全貌。当键长 $\ell \leq w$ 时，动态前驱（不包括 rank 和 select）的最优期望最大操作时间为：
+\[
+\Theta\left(\max\left\{1,\min \left\{
+  \frac{\log n}{\log w},\
+  \frac{\log \frac{\ell}{\log w}}{\log \left( \log \frac{\ell}{\log w}
+    \textrm{\large~/} \log\frac{\log n}{\log w} \right)},\
+  \log \frac{\log (2^\ell-n)}{\log w}
+ \right\}\right\}\right).
+\]
+
+我们的简洁的 $O(\log n/\log w)$ 动态前驱搜索界应该与 Fredman 和 Willard 的~\cite{fredman93fusion} $O(\log n/\log w + \sqrt{\log n})$ 界\footnote{\cite{fredman93fusion} 将其描述为对任意 $b \leq w^{1/6}$ 的 $O(\log n/\log b + \log b)$，由此他们得到 $O(\log n/\log\log n)$（因为 $w \geq \log n$）。} 相比较。对于更大的字长，Andersson 和 Thorup~\cite{andersson07exptrees} 将其改进为 $O(\log n/\log w + \log\log n)$，但 $\log\log n$ 项仍然阻止了当 $\log n = O(\log w)$ 时的常数时间。
+
+从技术上看，我们的数据结构最有趣的方面在于：对于规模为 $n = w^{O(1)}$ 的集合，它可以在常数时间内操作。这解决了 Ajtai、Komlos 和 Fredman~\cite{ajtai84hashing} 的一个主要开放问题。Ajtai 等人曾在 Yao 的抽象 cell-probe 模型中给出了这样一种数据结构，但指出所使用的函数无法被实现。作为部分解决方案，Fredman 和 Willard~\cite{fredman93fusion} 引入了\textbf{融合节点}，可以在常数时间内处理查询，但更新需要多项式时间。尽管更新效率低下，这仍然带来了上述第一个亚对数的动态前驱搜索界。我们将小集合数据结构称为\textbf{动态融合节点}，因为它能在常数时间内同时完成查询和更新。
+
+Fredman 和 Willard~\cite{fredman94atomic} 后来引入了\textbf{原子堆（atomic heaps）}，使用大小为 $s$ 的表可以在常数时间内处理规模为 $(\log s)^{O(1)}$ 的集合上的所有操作。我们的重点在于理解大字长带来的渐近影响。我们只使用与存储键数成线性关系的空间，但对于规模为 $w^{O(1)}$ 的集合，在常数操作时间下的容量是可能达到的最大值——无论可用空间有多大。这种规模的集合即使是在最简单的确定性动态字典（仅支持成员查询和常数时间更新）中也是全新的。
+
+与 Fredman 和 Willard~\cite{fredman93fusion,fredman94atomic} 一样，我们确实使用了乘法。Thorup~\cite{Tho03} 已经证明这是必要的，即使我们只想使用标准指令在常数时间内支持规模为 $\Omega(\log n)$ 的集合上的成员查询。然而，正如经典静态融合节点中的做法~\cite{andersson99fusion}，如果我们允许自定义的非标准操作，则我们可以仅使用 AC$^0$ 操作来实现我们的算法。\cite{ajtai84hashing} 原始的 cell-probe 解决方案似乎即使允许非标准操作也没有 AC$^0$ 实现。
+
+我们强调，我们的新动态融合节点通常既简化又改进了融合节点在动态环境中的应用，最显著的是在原始融合树~\cite{fredman93fusion} 中——原先的融合节点在树的底部必须切换到不同的技术（参见第~\ref{sec:set-n} 节），并且从未在大字长下获得最优结果。正如 Willard~\cite{willard92fusion} 在计算几何中所展示的那样，融合节点在许多不同的场合中都有用。
+
+\subsection{内容与技术概述}
+
+我们的新动态融合节点以~\cite{ajtai84hashing,fredman93fusion} 中的思想和技术为出发点，将它们整合到一个更紧密的解决方案中，对于规模为 $k = w^{1/4}$ 的集合，仅使用标准指令即可在常数时间内支持所有操作。在第~\ref{sec:prelim} 节中，我们回顾先前的技术，强调我们将复用的部分和思想，同时也指出它们的局限性。在第~\ref{sec:dyn-fusion} 节中，我们描述了新的动态融合节点，这构成了我们的核心技术贡献。一个重要特性是，我们使用\textbf{无关位匹配（matching with don't cares）}来编码压缩 trie 中的搜索。在第~\ref{sec:set-n} 节中，我们展示了如何在融合树中使用我们的动态融合节点来处理任意规模 $n$ 的集合，在 $O(\log n/\log k) = O(\log n/\log w)$ 时间内支持所有操作。对于 $n = w^{O(1)}$，这是 $O(1)$ 的。因为我们的融合节点是动态的，我们避免了原始融合树底部的动态二叉搜索树。我们的融合树经过增强以处理 rank 和 select，使用了~\cite{dietz89sums,patrascu04connect} 中的技术。在第~\ref{sec:lower} 节中，我们更详细地描述了如何从~\cite{fredman89cellprobe,beame02pred} 得到匹配的下界。最后，在第~\ref{sec:ran-pred} 节中，我们使用~\cite{patrascu06pred} 中的技术完善了较小键长下的随机化动态前驱搜索的全貌。
+
+% ======================================================================
+\section{符号说明与先前技术回顾}\label{sec:prelim}
+% ======================================================================
+
+我们用 $\lg$ 表示 $\log_2$，$m = \{0, \dots, m-1\}$。整数用 $w$-位字表示，最低有效位在右侧。我们将使用 $\tto$ 和 $\ttl$ 表示位 $0$ 和 $1$，区别于数字 $0$ 和 $1$（在字中它们用 $w-1$ 个前导 $\tto$ 填充）。在处理 $w$-位整数时，我们使用标准算术运算 $+$、$-$ 和 $\times$，均在模 $2^w$ 下工作。我们使用标准的按位布尔运算：$\AND$（与）、$\OR$（或）、$\XOR$（异或）和 $\NOT$（位取反）。我们还有左移 $\LSHIFT$ 和右移 $\RSHIFT$。
+
+与标准赋值一样（例如 C 语言~\cite{KR78}），如果我们将一个 $\ell_0$-位数 $x$ 赋给一个 $\ell_1$-位数 $y$，且 $\ell_0 < \ell_1$，则添加 $\ell_1 - \ell_0$ 个前导 $\tto$。如果 $\ell_0 > \ell_1$，则丢弃 $x$ 的 $\ell_0 - \ell_1$ 个前导位。
+
+\subsection{字的字段}
+
+通常我们将字视为划分为长度为 $f$ 的若干字段。我们用 $\lpiece{x}{i}{f}$ 表示第 $i$ 个字段，从右侧开始计数，$\lpiece{x}{0}{f}$ 是最右侧的字段。因此 $x$ 表示整数 $\sum_{i=0}^{w-1} 2^i \lpiece{x}{i}{1}$。注意，字段可以很容易地使用常规指令掩码提取，例如：
+\[
+\lpiece{x}{i}{f}= (x \RSHIFT (i \times f)) \AND ((1 \LSHIFT f) - 1).
+\]
+字段赋值如 $\lpiece{x}{i}{f}=y$ 的实现为：
+\[
+x = (x \AND \NOT m) \OR ((y \LSHIFT (i \times f)) \AND m) \quad \text{其中} \quad m = ((1 \LSHIFT f) - 1) \LSHIFT (i \times f).
+\]
+类似地，在常数时间内我们可以掩码提取字段区间：
+\begin{align*}
+\lpiece{x}{i..j}{f} &= (x \RSHIFT (i \times f)) \AND ((1 \LSHIFT ((j-i) \times f)) - 1),\\
+\lpiece{x}{i..*}{f} &= (x \RSHIFT (i \times f)).
+\end{align*}
+对于字的二维字段划分，我们使用记号：
+\[
+\lpiece{x}{i,j}{g \times f} = \lpiece{x}{i \times g + j}{f}.
+\]
+
+\subsection{在常数时间内查找最高和最低有效位}
+
+我们有一个操作 $\MSB(x)$，对于整数 $x$ 计算其最高有效设置位的索引。Fredman 和 Willard~\cite{fredman93fusion} 展示了如何使用乘法在常数时间内实现此操作，但 $\MSB$ 也可以通过将 $x$ 赋给一个浮点数并提取指数来非常高效地实现。使用浮点数转换的理论优势在于我们避免了~\cite{fredman93fusion} 中使用的依赖于 $w$ 的通用常数。
+
+利用 $\MSB$，我们也可以轻松找到 $x$ 的最低有效位：$\LSB(x) = \MSB((x-1) \XOR x)$。
+
+\subsection{规模为 $k$ 的小集合}
+
+我们的目标是维护一个规模为 $k = w^{\Theta(1)}$ 的动态集合。Ajtai 等人~\cite{ajtai84hashing} 使用了 $k = w / \log w$，而 Fredman 和 Willard~\cite{fredman93fusion} 使用了 $k = w^{1/6}$。我们使用 $k = w^{1/4}$。具体值在理论上没有区别，因为我们的总界是 $O(\log n/\log k) = O(\log n/\log w)$，对于 $k = w^{\Omega(1)}$ 和 $n = w^{O(1)}$ 而言是 $O(1)$ 的。
+
+为简单起见，下面我们假设 $k$ 是固定的，并根据 $k$ 定义各种常数，例如 $(\tto^{k-1}\ttl^k)^k$。然而，通过使用倍增技术，我们的常数都可以在 $O(\log k)$ 时间内计算出来。我们令 $k$ 为二的幂，随着集合的增长而倍增。这样，在后台计算常数的代价是可以忽略的。
+
+\subsection{索引}
+
+我们将键集合 $S$ 存储在一个无序数组 $KEY$ 中，该数组可容纳 $k$ 个 $w$-位数。我们还将维护一个 $\ceiling{\lg k}$-位索引的数组 $INDEX$，使得 $\lpiece{INDEX}{i}{\ceiling{\lg k}}$ 是 $S$ 中排名为 $i$（按排序顺序）的键在 $KEY$ 中的索引。这里的一个重要点是，$INDEX$ 及其 $k\ceiling{\lg k}$ 位可以放入单个字中。选择操作现在可以简单地实现为：
+\[
+\SELECT(i) = KEY\bigl[\lpiece{INDEX}{i}{\ceiling{\lg k}}\bigr].
+\]
+当查找查询键 $x$ 的前驱时，我们只需找到它的排名 $i$ 并返回 $\SELECT(i)$。
+
+考虑插入一个新键 $x$，假设我们已经找到了它的排名 $i$。为了支持在 $KEY$ 中查找空闲槽位，我们维护一个位图 $bKEY$ 标记已使用的槽位，并使用 $j = \MSB(bKEY)$ 作为第一个空闲槽位。要插入 $x$，我们设置 $KEY[j] = x$ 且 $\lpiece{bKEY}{j}{1} = 0$。要更新 $INDEX$，我们设置 $\lpiece{INDEX}{i+1..k}{\ceiling{\lg k}} = \lpiece{INDEX}{i..k-1}{\ceiling{\lg k}}$ 且 $\lpiece{INDEX}{i}{\ceiling{\lg k}} = j$。删除键只需反转上述过程。
+
+\subsection{二叉 Trie}
+
+用于 $w$-位键的二叉 trie~\cite{fredkin60trie} 是一棵二叉树，其中内部节点的子节点标记为 $\tto$ 和 $\ttl$，所有叶子深度为 $w$。叶子对应于从根到该叶子的路径上的位所表示的键，最接近叶子的位是最低有效位。令 $T(S)$ 为键集合 $S$ 的 trie。我们定义内部 trie 节点 $u$ 的\textbf{层级} $\ell(u)$ 为其子节点的高度。要在 $S$ 中查找键 $x$ 的前驱，我们沿着 $T(S)$ 的根出发的路径，匹配 $x$ 的位。当在搜索 $x$ 的过程中到达节点 $u$ 时，我们选择标记为 $\lpiece{x}{\ell(u)}{1}$ 的子节点。如果 $x \notin S$，则在某个阶段我们会到达一个节点 $u$，它有一个独子节点 $v$，且 $\lpiece{x}{\ell(u)}{1}$ 与 $v$ 的位相反。如果 $\lpiece{x}{\ell(u)}{1} = 1$，则 $x$ 在 $S$ 中的前驱是 $v$ 下的最大键。反之，如果 $\lpiece{x}{\ell(u)}{1} = 0$，则 $x$ 在 $S$ 中的后继是 $v$ 下的最小键。
+
+\subsection{压缩二叉 Trie}
+
+在压缩二叉 trie，或 Patricia trie~\cite{morrison68patricia} 中，我们取 trie 并短路所有度为1的节点路径，使得我们只有度为2的分支节点和叶子，因此最多有 $2k-1$ 个节点。这种短路不改变剩余节点的层级 $\ell$。
+
+要在压缩 trie $T^c(S)$ 中搜索键 $x$，我们从根开始。当我们在节点 $u$ 时，与普通 trie 一样，我们走向标记为 $\lpiece{x}{\ell(u)}{1}$ 的子节点。由于所有内部节点都有两个子节点，这个搜索总是找到一个唯一的叶子，对应于某个键 $y \in S$，我们称 $y$ 为 $x$ 的\textbf{匹配}。
+
+关于压缩 trie 的标准观察是：如果 $x$ 匹配 $y \in S$，则 $S$ 中没有键 $z$ 能与 $x$ 具有比 $y$ 更长的公共前缀。为理解这一点，首先注意如果 $x \in S$，则搜索必须终止于 $x$，因此我们可以假设 $x$ 匹配某个 $y \neq x$。令 $j$ 为 $x$ 和 $y$ 不同的最高有效位，即 $j = \MSB(x \XOR y)$。如果 $z$ 与 $x$ 有更长的公共前缀，那么它将在层级 $j$ 处从 $y$ 分支出来，这样对 $x$ 的搜索应该沿着通向 $z$ 的分支而不是通向 $y$ 的分支。同样的观察表明，在 $y$ 的叶子上方，层级 $j$ 处没有分支节点。令 $v$ 为搜索到 $y$ 的路径上层级 $j$ 下方的第一个节点。与常规 trie 一样，我们得出结论：如果 $\lpiece{x}{\ell(u)}{1} = 1$，则 $x$ 在 $S$ 中的前驱是 $v$ 下的最大键。反之，如果 $\lpiece{x}{\ell(u)}{1} = 0$，则 $x$ 在 $S$ 中的后继是 $v$ 下的最小键。
+
+要插入上述 $x$，我们只需在 $y$ 上方的层级 $j$ 处插入一个分支节点 $u$。$u$ 的父节点是 $v$ 原来的父节点。对应于 $x$ 的新叶子是 $u$ 的 $\lpiece{x}{j}{1}$-子节点，而 $v$ 是另一个子节点。
+
+\subsection{Ajtai 等人的 Cell-Probe 解决方案}
+
+现在我们可以轻松描述 Ajtai 等人~\cite{ajtai84hashing} 的 cell-probe 解决方案。我们将复用那些可以在字 RAM 上实现的部分，即只需要标准字操作的部分。
+
+如前所述，我们假设集合 $S$ 存储在一个无序数组 $KEY$（$k$ 个字）中，外加一个字 $INDEX$，使得 $KEY[\lpiece{INDEX}{i}{\ceiling{\lg k}}]$ 是 $S$ 中排名为 $i$ 的键。
+
+我们将压缩 trie 表示在一个数组 $T^c$ 中，有 $k-1$ 个条目表示内部节点，第一个条目是根。每个条目需要其在 $[w]$ 中的层级，以及指向每个子节点的 $[k]$ 中的索引（如果子节点是叶子则为 nil）。因此每个节点条目需要 $O(\log w)$ 位，描述压缩 trie 的整个数组 $T^c$ 需要 $O(k\log w) = o(w)$ 位。子节点的排序诱导了叶子的排序，叶子 $i$ 对应于键 $KEY[\lpiece{INDEX}{i}{\ceiling{\lg k}}]$。
+
+在 cell-probe 模型中，我们可以自由定义涉及常数个字的任意字操作，包括对表示压缩 trie 的字的新操作。我们定义一个新的字操作 $\text{TrieSearch}(x, T^c)$，给定键 $x$ 和压缩 trie $T^c$ 的正确表示，返回 $T^c$ 中匹配 $x$ 的叶子的索引 $i$。然后我们查找 $y = KEY[\lpiece{INDEX}{i}{\ceiling{\lg k}}]$，计算 $j = \MSB(x \XOR y)$。第二个新的字操作 $\text{TriePred}(x, T^c, j)$ 返回 $x$ 在 $S$ 中的排名 $r$，假设 $x$ 在层级 $j$ 从 $T^c$ 分支出来。
+
+要插入键 $x$，我们首先计算 $x$ 在 $S$ 中的排名 $r$，然后如前所述将 $x$ 插入 $KEY$ 和 $INDEX$。第三个新的字操作 $\text{TrieInsert}(T^c, x, j, r)$ 修改 $T^c$，在排名 $r$ 处插入一个新叶子，在层级 $j$ 添加适当的分支节点，以 $\lpiece{x}{j}{1}$ 为新叶子。
+
+总结起来，在 cell-probe 模型中，可以轻松支持小规模动态整数集上的所有操作，利用的是压缩 trie 可以编码在一个字中，因此我们可以使用特别定义的字操作来导航压缩 trie。Ajtai 等人~\cite{ajtai84hashing} 写道：``\textbf{开放问题}。我们的查询算法并不现实，因为在实际中搜索 trie 需要超过常数时间。''
+
+\subsection{Fredman 和 Willard 的带有压缩键的静态融合节点}
+
+Fredman 和 Willard~\cite{fredman93fusion} 解决了上述问题，使得搜索可以在常数时间内使用标准指令完成，但没有高效的更新。他们所谓的\textbf{融合节点}支持在多达 $w^{1/6}$ 个键中进行常数时间的前驱搜索。然而，对于 $k$ 个键，构造一个融合节点需要 $O(k^4)$ 时间。
+
+Fredman 和 Willard 证明了以下我们将会反复使用的引理：
+\begin{lemma}\label{lem:rank}
+令 $mb \leq w$。如果给定一个 $b$-位数 $x$ 和一个字 $A$，其中包含按排序顺序存储的 $m$ 个 $b$-位数，即 $\lpiece{A}{0}{b} < \lpiece{A}{1}{b} < \cdots < \lpiece{A}{m-1}{b}$，那么我们可以在常数时间内找到 $x$ 在 $A$ 中的排名，记作 $\RANK(x, A)$。
+\end{lemma}
+
+引理背后的基本思想是：首先使用乘法创建由 $m$ 个 $x$ 副本组成的 $x^m$；然后使用减法编码逐坐标比较 $\lpiece{A}{i}{b} < x$（对每个 $i$）；最后使用 $\MSB$ 找到最大的这样的 $i$。
+
+接下来，他们注意到对于 $S$ 中键的排序，只需考虑那些满足``存在 $y, z \in S$ 使得 $j = \MSB(y \XOR z)$''的位置 $j$ 上的位。这些位置正是 trie 中某处有分支节点的位置。令 $c_0 < \dots < c_{\ell-1}$ 为这些\textbf{重要位置（significant positions）}。则 $\ell < k$。
+
+在基于 $S$ 计算了一些变量之后，他们展示了在常数时间内可以将键 $x$ 压缩为（本质上）仅包含重要位置（加上一些无关的 $\tto$）。他们的压缩键 $\hat{x}$ 的长度为 $b \leq k^3$。令 $\hat{S}$ 表示 $S$ 中键的压缩版本组成的排序数组。由于 $k^4 \leq w$，该数组可以放入单个字中，因此他们可以在常数时间内计算 $i = \RANK(\hat{x}, \hat{S})$。那么 $\lpiece{\hat{S}}{i}{b}$ 是 $\hat{x}$ 在 $\hat{S}$ 中的前驱，$\lpiece{\hat{S}}{i+1}{b}$ 是后继。其中一个（记为 $\hat{y} = \lpiece{\hat{S}}{i}{b}$）与 $\hat{x}$ 拥有最长公共前缀，他们论证了原来的键 $y = KEY\bigl[\lpiece{INDEX}{i}{\ceiling{\lg k}}\bigr]$ 在 $S$ 中也一定与 $x$ 拥有最长公共前缀。
+
+接下来，他们计算 $j = \MSB(x \XOR y)$ 并查看它在重要位之间的位置，计算 $h = \RANK(j, (c_0, \dots, c_\ell))$，即 $c_h < j \leq c_{h+1}$。参考压缩 trie 表示，$i$ 和 $h$ 精确地告诉我们 $x$ 从哪条捷径边 $(u, v)$ 分支出来。$x$ 的前驱是：如果 $\lpiece{x}{j}{1} = 1$ 则是 $y$ 下的最大键；否则后继是 $y$ 下的最小键。这里的要点是，他们可以创建一个表 $RANK$，对于每个 $i \in [k]$、$h \in [k]$ 和 $\lpiece{x}{j}{1} \in [2]$ 的值，返回 $x$ 在 $S$ 中的排名 $r \in [k]$。从排名我们得到前驱 $KEY\bigl[\lpiece{INDEX}{r}{\ceiling{\lg k}}\bigr]$，全部在常数时间内完成。
+
+Fredman 和 Willard~\cite{fredman93fusion} 在 $O(k^4)$ 时间内构造上述融合节点。虽然查询只需常数时间，但更新的效率不比重建融合节点更高。
+
+% ======================================================================
+\section{动态融合节点}\label{sec:dyn-fusion}
+% ======================================================================
+
+现在我们来介绍我们的动态融合节点：对于给定的 $k \leq w^{1/4}$，维护一个多达 $k$ 个 $w$-位整数的动态集合 $S$，仅使用标准字操作即可在常数时间内同时支持更新和查询，从而解决了 Ajtai 等人~\cite{ajtai84hashing} 的开放问题。
+
+与之前一样，我们假设集合 $S$ 存储在无序数组 $KEY$（$k$ 个字）中，外加一个字 $INDEX$，使得 $\SELECT(i) = KEY[\lpiece{INDEX}{i}{\ceiling{\lg k}}]$ 是 $S$ 中排名为 $i$ 的键。如引言所述，我们可以使用 rank 和 select 轻松计算前驱和后继。
+
+\subsection{无关位匹配}
+
+使 Fredman 和 Willard 的融合节点难以动态化的一个问题是：当插入一个键时，我们可能得到一个新的重要位置 $j$。那么，对于每个键 $y \in S$，我们必须将 $\lpiece{y}{j}{1}$ 插入到压缩键 $\hat{y}$ 中，似乎没有简单的方法在每次更新时常数时间内支持这种改变。相比之下，对于压缩 trie，当插入新键时，我们只需要包含一个新的分支节点。然而，正如 Ajtai 等人所述，搜索压缩 trie 需要超过常数时间。
+
+在这里，我们将在压缩键中引入\textbf{无关位（don't cares）}，以便在常数时间内完美模拟压缩 trie 搜索，同时支持常数时间的更新。引入无关位可能看起来令人惊讶，因为它们通常使问题更难而非更易，但在我们的小集合语境中，使用无关位恰好是正确的做法。基本思想如图~\ref{fig:representation} 所示。
+
+\begin{figure}[htbp]
+\begin{center}
+% Sub-figure 1: Array with four 8-bit keys
+\begin{tabular}{*{9}{c}}
+7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\ \hline
+1 & 1 & 1 & 1 & 1 & 0 & 1 & 0 \hspace{2em} 4\\
+1 & 1 & 0 & 1 & 1 & 0 & 1 & 0 \hspace{2em} 3\\
+1 & 1 & 0 & 1 & 0 & 0 & 1 & 0 \hspace{2em} 2\\
+1 & 0 & 0 & 1 & 0 & 0 & 1 & 0 \hspace{2em} 1\\
+1 & 0 & 0 & 1 & 0 & 0 & 0 & 1 \hspace{2em} 0
+\end{tabular}
+
+\medskip
+一个具有四个 $8$-位键的数组，顶部为位位置，右侧为排名。
+
+\bigskip
+
+% Sub-figure 2: Compressed trie
+\begin{tabular}{*{9}{c}}
+7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\ \hline
+  &   & 1 &   &   &   &   &    \\ \cline{3-3} \cline{5-5}
+  &   & 0 &   & 1 &   &   &    \\ \cline{2-5}
+  & 1 &   &   & 0 &   &   &    \\ \cline{1-2} \cline{5-5} \cline{7-7}
+  & 0 &   &   &   &   & 1 &    \\ \cline{2-7}
+  &   &   &   &   &   & 0 &
+\end{tabular}
+
+\medskip
+Ajtai 等人~\cite{ajtai84hashing} 使用的压缩 trie。
+
+\bigskip
+
+% Sub-figure 3: Compressed keys
+\begin{tabular}{*{5}{c}}
+6 & 5 & 3 & 1 \\ \hline
+1 & 1 & 1 & 1 \hspace{2em} 4\\
+1 & 0 & 1 & 1 \hspace{2em} 3\\
+1 & 0 & 0 & 1 \hspace{2em} 2\\
+0 & 0 & 0 & 1 \hspace{2em} 1\\
+0 & 0 & 0 & 0 \hspace{2em} 0
+\end{tabular}
+
+\medskip
+Fredman 和 Willard~\cite{fredman93fusion} 使用的压缩键。
+
+\bigskip
+
+% Sub-figure 4: Compressed keys with don't cares
+\begin{tabular}{*{5}{c}}
+6 & 5 & 3 & 1 \\ \hline
+1 & 1 & ? & ? \hspace{2em} 4\\
+1 & 0 & 1 & ? \hspace{2em} 3\\
+1 & 0 & 0 & ? \hspace{2em} 2\\
+0 & ? & ? & 1 \hspace{2em} 1\\
+0 & ? & ? & 0 \hspace{2em} 0
+\end{tabular}
+
+\medskip
+带有无关位（\texttt{?}）的压缩键，在不用于（压缩）trie 中分支的位置上放置无关位。
+
+\bigskip
+
+% Sub-figure 5: Searching with key x
+\begin{tabular}{*{5}{c}}
+6 & 5 & 3 & 1 \\ \hline
+1 & 1 & $x_3$ & $x_1$ \hspace{2em} 4\\
+1 & 0 & 1 & $x_1$ \hspace{2em} 3\\
+1 & 0 & 0 & $x_1$ \hspace{2em} 2\\
+0 & $x_5$ & $x_3$ & 1 \hspace{2em} 1\\
+0 & $x_5$ & $x_3$ & 0 \hspace{2em} 0
+\end{tabular}
+
+\medskip
+当搜索键 $x$ 时，我们在位置 $j$ 处用 $x$ 的第 $j$ 位 $x_j$ 替换无关位。
+\end{center}
+\caption{给定键集合的多种表示方式。}\label{fig:representation}
+\end{figure}
+
+最初，我们忽略键压缩，只关注我们对压缩 trie 搜索的模拟。对于键 $y \in S$，我们只关心那些使得对于某个其他 $z \in S$ 有 $j = \MSB(y \XOR z)$ 的位 $\lpiece{y}{j}{1}$。一个等价定义是：如果 trie 在某个层级 $j$ 有一个分支节点 $u$，那么对于所有从 $u$ 下降的键 $y$，我们关心位置 $j$。我们现在将从 $y$ 使用字符集 $\{\tto, \ttl, \ttq\}$ 创建一个键 $y^{\ttq}$。尽管这些字符不仅仅是位，我们仍令 $\lpieceq{y^{\ttq}}{j}$ 表示 $y^{\ttq}$ 的第 $j$ 个字符。如果我们在 $y$ 中不关心位置 $j$，则设置 $\lpieceq{y^{\ttq}}{j} = \ttq$；否则 $\lpieceq{y^{\ttq}}{j} = \lpiece{y}{j}{1}$。
+
+查询键 $x$ \textbf{匹配} $y^{\ttq}$ 当且仅当对于所有使得 $\lpieceq{y^{\ttq}}{j} \neq \ttq$ 的 $j$，有 $\lpiece{x}{j}{1} = \lpieceq{y^{\ttq}}{j}$。那么 $x$ 匹配 $y^{\ttq}$ 当且仅当我们在 $S$ 上的压缩 trie 中搜索 $x$ 时会到达 $y$。由于这种在压缩 trie 中的搜索总是成功的，我们知道每个 $x$ 都有一个匹配 $y^{\ttq}$，$y \in S$。
+
+\begin{observation}\label{obs:trie-search}
+令 $y^{\ttq}$ 为 $x$ 的匹配，假设 $y \neq x$。设 $j = \MSB(x \XOR y)$。如果 $x < y$，则 $x \AND (\ttl^{w-j}\tto^j)$ 匹配 $z^{\ttq}$，其中 $z$ 是 $x$ 的后继。如果 $x > y$，则 $x \OR (\tto^{w-j}\ttl^j)$ 匹配 $z^{\ttq}$，其中 $z$ 是 $x$ 的前驱。
+\end{observation}
+\begin{proof}
+由于 $x$ 匹配 $y^{\ttq}$，我们知道 $\lpieceq{y^{\ttq}}{j} = \ttq$。令 $(u, v)$ 为压缩 trie 中绕过位置 $j$ 的捷径。如果 $x < y$，$x$ 的后继是 $v$ 下的最小键，这正是我们搜索 $x \AND (\ttl^{w-j}\tto^j)$ 时所找到的，因为我们从 $v$ 开始总是选择 $\tto$-子节点。同样地，如果 $x > y$，$x$ 的前驱是 $y$ 下的最大键，这正是我们搜索 $x \OR (\tto^{w-j}\ttl^j)$ 时所找到的，因为我们从 $v$ 开始总是选择 $\ttl$-子节点。
+\end{proof}
+
+观察~\ref{obs:trie-search} 意味着两次匹配足以找到键 $x$ 的前驱或后继。第二次匹配消除了原始静态融合节点中表 $RANK$ 的需要。这种两步方法类似于 Grossi 等人~\cite{grossi09succinct} 对整数的``盲''压缩 trie 搜索。然而，Grossi 等人没有使用我们的无关位匹配。他们的数据结构是静态的、不支持更新，并且使用了大小为 $2^{\Omega(w)}$ 的表，就像 Fredman 和 Willard 的原子堆~\cite{fredman94atomic} 一样。
+
+接下来我们观察到，融合节点的键压缩不影响带有无关位的键的匹配，因为如果我们对某个键在位置 $j$ 上关心，那么根据定义这是一个重要位置。反之，这意味着不重要位置在所有键中都是无关位，因此跳过不重要位置不影响匹配——即，$x$ 匹配 $y^{\ttq}$ 当且仅当 $\hat{x}$ 匹配 $\hat{y}^{\ttq}$，其中 $\hat{x}$ 和 $\hat{y}^{\ttq}$ 是 $x$ 和 $y^{\ttq}$ 的压缩版本。
+
+在第~\ref{sec:key-compress} 节中，我们将展示如何维护只保留重要位置的\textbf{完美压缩}。因此，如果 $\ell \leq k$ 是重要位置的数量，那么 $\hat{x}$ 和 $\hat{y}^{\ttq}$ 的长度都是 $\ell$（回想 Fredman 和 Willard~\cite{fredman93fusion} 的压缩键有 $k^3$ 位，且他们没有展示如何在插入新键时更新压缩）。为了一致格式化，我们将压缩键视为有 $k$ 位，带有 $k-\ell$ 个前导 $\tto$。
+
+为检查 $\hat{x}$ 是否匹配 $\hat{y}^{\ttq}$，我们将创建 $\hat{y}^{\hat{x}}$ 使得：如果 $\lpieceq{\hat{y}^{\ttq}}{h} \neq \ttq$，则 $\lpiece{\hat{y}^{\hat{x}}}{h}{1} = \lpiece{\hat{y}}{h}{1}$；如果 $\lpieceq{\hat{y}^{\ttq}}{h} = \ttq$，则 $\lpiece{\hat{y}^{\hat{x}}}{h}{1} = \lpiece{\hat{x}}{h}{1}$。那么 $\hat{x}$ 匹配 $\hat{y}^{\ttq}$ 当且仅当 $\hat{x} = \hat{y}^{\hat{x}}$。
+
+注意，如果 $y, z \in S$ 且 $x$ 是任意 $w$-位键，则 $y < z \iff \hat{y}^{\hat{x}} < \hat{z}^{\hat{x}}$。这是因为来自 $x$ 的位不会在键 $y, z \in S$ 之间引入任何新的分支。
+
+我们将同时为所有 $y \in S$ 在常数时间内创建 $\hat{y}^{\hat{x}}$。为此，我们维护两个 $k \times k$ 位矩阵 $BRANCH$ 和 $FREE$，它们共同表示存储的带有无关位的压缩键。令 $y$ 为 $S$ 中排名为 $i$ 的键，$c_h$ 为重要位置。如果 $\lpieceq{\hat{y}^{\ttq}}{h} \neq \ttq$，则 $\lpiece{BRANCH}{i,h}{k \times 1} = \lpiece{\hat{y}}{h}{1}$ 且 $\lpiece{FREE}{i,h}{k \times 1} = \tto$。如果 $\lpieceq{\hat{y}^{\ttq}}{h} = \ttq$，则 $\lpiece{BRANCH}{i,h}{k \times 1} = \tto$ 且 $\lpiece{FREE}{i,h}{k \times 1} = \ttl$。对于压缩键 $\hat{x}$，令 $\hat{x}^k$ 表示 $x$ 重复 $k$ 次，通过将 $x$ 乘以常数 $(\tto^{k-1}\ttl)^k$ 得到。那么 $BRANCH \OR (\hat{x}^k \AND FREE)$ 就是所需的 $y \in S$ 的 $\hat{y}^{\hat{x}}$ 数组，我们定义：
+\[
+\MATCH(x) = \RANK(\hat{x},\; BRANCH \OR (\hat{x}^k \AND FREE)).
+\]
+这里 $\RANK$ 如引理~\ref{lem:rank} 实现，$\MATCH(x)$ 给出匹配 $x$ 的 $y^{\ttq}$ 的索引。根据观察~\ref{obs:trie-search}，我们可以如下计算 $x$ 在 $S$ 中的排名：
+
+\paragraph{$\RANK(x)$ 的计算过程}
+\begin{enumerate}
+\item $i = \MATCH(x)$。
+\item $y = KEY\bigl[\lpiece{INDEX}{i}{\ceiling{\lg k}}\bigr]$。
+\item 如果 $x = y$，返回 $i$。
+\item $j = \MSB(x \XOR y)$。
+\item $i_0 = \MATCH(x \AND (\ttl^{w-j}\tto^j))$。
+\item $i_1 = \MATCH(x \OR (\tto^{w-j}\ttl^j))$。
+\item 如果 $x < y$，返回 $i_0 - 1$。
+\item 如果 $x > y$，返回 $i_1$。
+\end{enumerate}
+
+\paragraph{插入键}
+我们只在应用上述 $\RANK(x)$ 验证 $x \notin S$ 之后才插入键 $x$。这也意味着我们已经计算了 $j$、$i_0$ 和 $i_1$，其中 $j$ 表示 $x$ 应该作为叶子分支出来的位置。另一个分支下方的键恰好是索引为 $i_0, \dots, i_1$ 的那些。
+
+在继续之前，我们需要考虑 $j$ 是否是一个新的重要位置（假设在当前重要位置中排名为 $h$）。如果是，我们需要更新压缩函数以包含 $j$，这将在第~\ref{sec:key-compress} 节中介绍。对当前压缩键数组的第一个影响是插入一列无关位列 $h$。这在 $BRANCH$ 数组中是一列 $\tto$，在 $FREE$ 数组中是一列 $\ttl$。为了达到这个效果，我们首先需要将所有 $\geq h$ 的列向左移动一位。为此，我们需要一些简单的掩码。设置了第 $h$ 列的 $k \times k$ 位矩阵 $M_h$ 计算为：
+\[
+M_h = (\tto^{k-1}\ttl)^k \LSHIFT h,
+\]
+设置了第 $i$ 到 $j$ 列的 $k \times k$ 位矩阵 $M_{i:j}$ 计算为：
+\[
+M_{i:j} = M_{j+1} - M_i.
+\]
+这个计算对 $M_{0:k-1}$ 不适用，后者可直接计算为 $M_{0:k-1} = \ttl^{k^2}$。对于 $X = BRANCH, FREE$，我们要将所有 $\geq h$ 的列向左移动一位：
+\[
+X = (X \AND M_{0:h-1}) \OR ((X \AND M_{h:k-1}) \LSHIFT 1).
+\]
+为修复新列 $h$，我们设置：
+\begin{align*}
+FREE &= FREE \OR M_h,\\
+BRANCH &= BRANCH \AND \NOT M_h.
+\end{align*}
+现在我们已经确保对应于位置 $j = c_h$ 的列 $h$ 作为重要位置包含在 $BRANCH$ 和 $FREE$ 中。接下来，对于所有索引为 $i_0, \dots, i_1$ 的键，我们要将列 $h$ 中的位设置为 $\lpiece{y}{j}{1}$。为此，我们计算设置了第 $i_0$ 到 $i_1$ 行的 $k \times k$ 位掩码 $M^{i_0:i_1}$：
+\[
+M^{i_0:i_1} = (1 \LSHIFT ((i_1+1) \times k)) - (1 \LSHIFT (i_0 \times k)),
+\]
+然后我们掩码出这些行中的列 $h$：
+\[
+M^{i_0:i_1}_h = M^{i_0:i_1} \AND M_h.
+\]
+现在设置：
+\begin{align*}
+FREE &= FREE \AND \NOT M^{i_0:i_1}_h,\\
+BRANCH &= BRANCH \OR (M^{i_0:i_1}_h \times \lpiece{y}{j}{1}).
+\end{align*}
+接下来我们需要插入对应于 $\hat{x}^{\ttq}$ 的行，$r = \RANK(x)$。在 $X = BRANCH, FREE$ 中为行 $r$ 腾出空间：
+\[
+X = (X \AND M^{0:r-1}) \OR ((X \AND M^{r:k-1}) \LSHIFT k).
+\]
+我们还需要创建对应于 $\hat{x}^{\ttq}$ 的新行。令 $\hat{y}^{\ttq}$ 为 $x$ 匹配的带有无关位的压缩键。则：
+\begin{align*}
+\lpieceq{\hat{x}^{\ttq}}{0..h-1} &= \ttq^h,\\
+\lpieceq{\hat{x}^{\ttq}}{h} &= \lpiece{x}{j}{1},\\
+\lpieceq{\hat{x}^{\ttq}}{h+1..k-1} &= \lpieceq{\hat{y}^{\ttq}}{h+1..k-1}.
+\end{align*}
+在插入 $x$ 的行 $r$ 之后，用 $i$ 表示 $y$ 的索引，我们设置：
+\begin{align*}
+\lpiece{BRANCH}{r,0..h-1}{k \times 1} &= \tto^h,\\
+\lpiece{FREE}{r,0..h-1}{k \times 1} &= \ttl^h,\\
+\lpiece{BRANCH}{r,h}{k \times 1} &= \lpiece{x}{j}{1},\\
+\lpiece{FREE}{r,h}{k \times 1} &= \tto,\\
+\lpiece{BRANCH}{r,h+1..k-1}{k \times 1} &= \lpiece{BRANCH}{i,h+1..k-1}{k \times 1},\\
+\lpiece{FREE}{r,h+1..k-1}{k \times 1} &= \lpiece{FREE}{i,h+1..k-1}{k \times 1}.
+\end{align*}
+这就完成了 $BRANCH$ 和 $FREE$ 的更新。删除键只需反转上述过程。我们还需要说明我们的新完美压缩。
+
+\subsection{完美动态键压缩}\label{sec:key-compress}
+
+与 Fredman 和 Willard~\cite{fredman93fusion} 一样，我们有一组最多 $k$ 个重要位位置 $c_0, \dots, c_{\ell-1} \in [w]$，$c_0 < c_1 < \cdots < c_{\ell-1}$。对于给定的键 $x$，我们希望在常数时间内构造一个 $\ell$-位压缩键 $\hat{x}$，使得对于 $h \in [\ell]$，$\lpiece{\hat{x}}{h}{1} = \lpiece{x}{c_h}{1}$。我们还将支持在常数时间内添加或删除重要位置，使其在未来的压缩中被纳入或排除。
+
+Fredman 和 Willard 的压缩更为松散，允许压缩键在重要位之间有一些无关的零，且压缩键的长度为 $O(k^3)$。这里，我们将只保留重要位。
+
+我们的映射将涉及三次乘法。第一次乘法将重要位打包到长度为 $O(w/k^2)$ 的段中。后两次乘法将对它们重新排序并连续放置。
+
+\subsection{打包}
+
+我们使用 Tarjan 和 Yao~\cite{tarjan79sparse} 存储稀疏表的方法来打包重要位。我们有一个 $w$-位字 $B$，其中重要位被设置。对于给定键 $x$，我们将对 $x \AND B$ 进行操作。
+
+对于某个参数 $b$，我们将字划分为 $b$ 位的块。对于下面的构造，我们可以选择任何满足 $k^2 \leq b \leq w/k^2$ 的 $b$。我们将把重要位打包到一个 $2b$ 位的段中，因此较小的 $b$ 似乎有优势。然而，如果我们以后想要一个在 $k$ 不是常数时也能工作的统一算法，那么块的数量是 $k^{O(1)}$ 就很重要。因此我们选择最大的 $b = w/k^2$。
+
+我们寻找 $w/b$ 个移位值 $s_i < k^2/2$，使得没有两个移位后的块 $\lpiece{B}{i}{k^2} \LSHIFT s_i$ 在同一位置有设置位。打包后的键将是 $2b$ 位的段：
+\[
+\mu(x) = \sum_{i=0}^{w/b} \bigl(\lpiece{(x \AND B)}{i}{b} \LSHIFT s_i\bigr).
+\]
+由于我们从不将设置位加到同一位置，设置位将直接出现在和中。移位值 $s_i$ 按贪心方式找到（$i = 0, \dots, w/b-1$）。我们要选择 $s_i$ 使得 $\lpiece{B}{i}{b} \LSHIFT s_i$ 不与 $\sum_{j=0}^{i-1} (\lpiece{B}{j}{b} \LSHIFT s_j)$ 相交。$\lpiece{B}{i}{b}$ 中的设置位 $p$ 与 $\sum_{j=0}^{i-1} (\lpiece{B}{j}{b} \LSHIFT s_j)$ 中的设置位 $q$ 碰撞当且仅当 $s_i = p - q$。总共有最多 $k$ 个设置位，所以最多有 $k^2/4$ 个移位值 $s_i$ 不能使用。因此总存在一个好的移位值满足 $s_i < k^2/2$。
+
+为了在常数时间内计算上述和，我们将维护一个字 $BSHIFT$ 来指定所有块的移位。对于 $i = 0, \dots, w/b-1$：
+\[
+\lpiece{BSHIFT}{w/b-1-i}{b} = 1 \LSHIFT s_i.
+\]
+本质上我们希望通过乘积 $(x \AND B) \times BSHIFT$ 来计算打包，但这样会产生块间干扰。为避免此问题，我们使用掩码 $E_b = (\tto^b\ttl^b)^{w/(2b)}$ 来选取每隔一个块，然后计算：
+\begin{align*}
+\mu(x) = \bigl(&((x \AND B \AND E_b) \times (BSHIFT \AND E_b)) \\
+&+ (((x \AND B) \RSHIFT b) \AND E_b) \times ((BSHIFT \RSHIFT b) \AND E_b)\bigr) \RSHIFT (w-2b).
+\end{align*}
+
+\paragraph{重置一个块}
+如果在 $B$ 中包含了新的重要位 $j$，我们可能需要改变包含位 $j$ 的块 $i$ 的移位 $s_i$。当 $b$ 是二的幂时，$i = j \RSHIFT \lg b$。
+
+更新相当简单。首先，我们通过设置 $\lpiece{BSHIFT}{w/b-1-i}{b} = 0$ 将块 $i$ 从打包中移除。现在 $\mu(B)$ 描述了块 $i$ 之外所有位的打包。为找到新的移位值 $s_i$，我们使用一个有 $b k^2$ 位的常数 $S_0$，其中对于 $s = 0, \dots, k^2/2-1$：
+\[
+\lpiece{S_0}{s}{2b} = 1 \LSHIFT s.
+\]
+计算乘积 $S_0 \times \lpiece{B}{i}{b}$，我们得到：
+\[
+\lpiece{(S_0 \times \lpiece{B}{i}{b})}{s}{2b} = \lpiece{B}{i}{b} \LSHIFT s.
+\]
+$s$ 可以作为移位当且仅当：
+\[
+\mu(B) \AND \lpiece{(S_0 \times \lpiece{B}{i}{b})}{s}{2b} = 0.
+\]
+此值总是不超过 $(1 \LSHIFT 3b/2)$，所以：
+\begin{align*}
+&\mu(B) \AND \lpiece{(S_0 \times \lpiece{B}{i}{b})}{s}{2b} = 0\\
+&\iff (1 \LSHIFT 3b/2) \AND ((1 \LSHIFT 3b/2) - (\mu(B) \AND \lpiece{(S_0 \times \lpiece{B}{i}{b})}{s}{2b})) \neq 0.
+\end{align*}
+因此我们可以如下计算最小的好移位值：
+\begin{align*}
+s_i = \LSB\bigl(&(1 \LSHIFT 3b/2)^{k^2/2} \AND ((1 \LSHIFT 3b/2)^{k^2/2} \\
+&- (\mu(B)^{k^2/2} \AND (S_0 \times \lpiece{B}{i}{b})))\bigr) \RSHIFT \lg (2b).
+\end{align*}
+剩下的只需设置：
+\[
+\lpiece{BSHIFT}{i}{b} = 1 \LSHIFT s_i.
+\]
+然后 $\mu(x)$ 给出所需的更新后的打包。
+
+\subsection{最终重排}
+
+现在所有重要位打包在 $\mu(x)$ 中，长度为 $2b \leq 2w/k^2$ 位，重要位 $h$ 在某个位置 $\mu_h$。我们想要计算所有重要位就位的压缩键 $\hat{x}$，即 $\lpiece{\hat{x}}{h}{1} = \lpiece{\hat{x}}{c_h}{1}$。
+
+第一步是创建一个具有 $k$ 个 $4b$ 位字段的字 $LSHIFT$，其中 $\lpiece{LSHIFT}{h}{4b} = 1 \LSHIFT (2b - \mu_h)$。那么 $(LSHIFT \times \mu(x)) \RSHIFT 2b$ 是一个字，其第 $h$ 个字段的第 $h$ 个重要位在其第一个位置。我们使用 $((LSHIFT \times \mu(x)) \RSHIFT 2b) \AND (\tto^{4b-1}\ttl)^{k}$ 掩码出所有其他位。
+
+最后，为收集重要位，我们乘以 $k \times 4b$ 位常数 $S_1$，其中对于 $h \in [k]$，$\lpiece{S_1}{k-1-h}{4b} = \ttl \LSHIFT h$。现在压缩键可以计算为：
+\[
+\hat{x} = \bigl(S_1 \times \bigl(((LSHIFT \times \mu(x)) \RSHIFT 2b) \AND (\tto^{4b-1}\ttl)^{k}\bigr)\bigr) \RSHIFT ((k-1) \times 4b).
+\]
+
+\paragraph{更新}
+最后我们需要描述如何在每次更新时常数时间内维护 $LSHIFT$。为此，我们还将维护一个 $k \times \lg w$ 位的字 $C$，其中包含重要位的索引，即 $\lpiece{C}{h}{\lg w} = c_h$。
+
+我们可以将更新分为两部分：一是改变块 $i$ 的移位，二是插入或删除重要位。首先考虑块 $i$ 的移位从 $s_i$ 变为 $s_i'$。如果块 $i$ 没有重要位，即 $\lpiece{B}{i}{b} = 0$，则无需做任何事。否则，块 $i$ 中第一个重要位的索引计算为 $h_0 = \RANK(i \times b, C)$，最后一个的索引计算为 $h_1 = \RANK((i+1) \times b, C) - 1$。
+
+在打包中，对于 $h = h_0, \dots, h_1$，重要位 $h$ 将移动到 $\mu_h' = \mu_h + s_i' - s_i$。数值 $\mu_h$ 不是显式存储的，而只是以移位的形式存储（$\lpiece{LSHIFT}{h}{4b} = \ttl \LSHIFT (2b - \mu_i)$）。移位的改变对所有 $h \in [h_0, h_1]$ 都是一样的，所以我们只需：
+\[
+\lpiece{LSHIFT}{h_0..h_1}{4b} = \lpiece{LSHIFT}{h_0..h_1}{4b} \LSHIFT (s_b - s_b'),
+\]
+当 $s_b < s_b'$ 时将``$\LSHIFT (s_b - s_b')$''解释为``$\RSHIFT (s_b' - s_b)$''。
+
+我们需要处理的另一个操作是：当一个新的重要位 $h$ 在位置 $c_h \in [w]$ 被引入时（即 $\lpiece{B}{c_h}{1} = \ttl$）。首先我们需要将 $c_h$ 插入 $C$：
+\[
+\lpiece{C}{h+1..*}{\lg w} = \lpiece{C}{h..*}{\lg w} \quad \text{且} \quad \lpiece{C}{h}{\lg w} = c_h.
+\]
+重要位 $h$ 位于块 $i = c_h \RSHIFT \lg b$ 中，打包将把它放在位置 $\mu_i = c_h - i \times b + s_i$。因此对于 $LSHIFT$ 的最终更新：
+\[
+\lpiece{LSHIFT}{h+1..*}{4b} = \lpiece{LSHIFT}{h..*}{4b} \quad \text{且} \quad \lpiece{LSHIFT}{h}{4b} = 1 \LSHIFT (2b - \mu_i).
+\]
+删除重要位 $h$ 通过以下简单语句完成：
+\[
+\lpiece{C}{h..*}{\lg w} = \lpiece{C}{h+1..*}{\lg w} \quad \text{且} \quad \lpiece{LSHIFT}{h..*}{4b} = \lpiece{LSHIFT}{h+1..*}{4b}.
+\]
+这就完成了完美压缩的描述。
+
+% ======================================================================
+\section{动态融合树：操作时间为 $O(\log n/\log w)$}\label{sec:set-n}
+% ======================================================================
+
+现在我们将展示如何维护一个 $n$ 个 $w$-位整数的动态集合 $S$，在 $O(\log n/\log w)$ 时间内支持所有操作。我们的规模为 $k$ 的融合节点被用于融合树中——融合树是一棵度为 $\Theta(k)$ 的搜索树。因为我们的融合节点是动态的，我们避免了原始动态融合树~\cite{fredman93fusion} 底部的动态二叉搜索树。我们的融合树经过增强以处理 rank 和 select，使用了 Dietz~\cite{dietz89sums} 维护链表中顺序的方法。然而，Dietz 只处理列表而没有键，他使用的制表法只能处理规模为 $O(\log n)$ 的节点。为了利用可能更大的字长 $w$，我们采用 P\u{a}tra\c{s}cu 和 Demaine~\cite[第8节]{patrascu04connect} 的简化技巧来处理小权重的部分和。为简单起见，我们将表示集合 $S \cup \{-\infty\}$，其中 $-\infty$ 是一个比任何真实键都小的键。
+
+我们的动态融合节点对于规模最大为 $k = w^{1/4}$ 的集合支持所有操作在常数时间内完成。我们将创建一棵度在 $k/16$ 到 $k$ 之间的融合搜索树。键全部在叶子中，高度为 $i$ 的节点将有介于 $(k/4)^i/4$ 和 $(k/4)^i$ 之间的后代叶子。标准地，节点更新的常数时间意味着我们可以在与高度成比例的时间内维护树的平衡（当叶子被插入或删除时）。当兄弟节点合并或分裂时，我们在后台构建新的节点结构，一次添加一个子节点（详见~\cite[第3节]{andersson07exptrees}）。总高度为 $O(\log n/\log w)$，这将界定我们的查询和更新时间。
+
+首先，假设我们只需要支持前驱搜索。对于节点 $u$ 的每个子节点 $v$，我们想知道从 $v$ 下降的最小键。这些最小键的集合 $S_u$ 由我们的融合节点维护。这包括了如第~\ref{sec:prelim} 节所述的 $KEY_u$ 和 $INDEX_u$。第 $i$ 个键为 $KEY_u[\lpiece{INDEX_u}{i}{\ceiling{\lg k}}]$。我们还有另一个数组 $CHILD_u$，给出指向 $u$ 的子节点的指针，其中 $CHILD_u$ 使用与 $KEY_u$ 相同的索引。因此第 $i$ 个子节点由 $CHILD_u[\lpiece{INDEX_u}{i}{\ceiling{\lg k}}]$ 指向。
+
+当我们带着键 $x$ 到达融合节点 $u$ 时，在常数时间内我们得到索引 $i = \RANK_u(x)$，即 $x$ 所属的子节点 $v$ 的索引——即最大的 $i$ 使得 $KEY[\lpiece{INDEX}{i}{\ceiling{\lg k}}] < x$。沿着 $CHILD_u[\lpiece{INDEX}{i}{\ceiling{\lg k}}]$ 向下，我们最终到达包含 $x$ 在 $S$ 中前驱的叶子。
+
+现在，如果我们还想知道 $x$ 的排名，那么对于每个节点 $u$ 和 $u$ 的子节点索引 $i$，我们想知道从索引 $< i$ 的子节点下降的键数 $N_u[i]$。将搜索路径上所有节点的这些数量相加即得到 $x$ 的排名（技术细节：计数也会计入 $-\infty$ 的一次，除非搜索终止于 $-\infty$）。
+
+问题在于如何维护数字 $N[i]$；因为当我们在索引为 $i$ 的子节点下方添加一个键时，我们希望为所有 $j > i$ 的 $N[j]$ 加一。如~\cite[第8节]{patrascu04connect} 中所述，我们将 $N_u[i]$ 维护为两个数之和。对于每个节点 $u$，我们将有一个常规数组 $M_u$（$k$ 个数，每个一个字），外加一个数组 $D_u$（$k$ 个在 $-k$ 到 $k$ 之间的数，每个使用 $\ceiling{\lg k}+1$ 位）。我们始终有 $N_u[i] = M_u[i] + \lpiece{D_u}{i}{\ceiling{\lg k}+1}$。如~\cite[第8节]{patrascu04connect} 所述，在常数时间内对所有的 $j > i$ 将 $\lpiece{D_u}{j}{\ceiling{\lg k}+1}$ 加一是容易的，只需：
+\[
+\lpiece{D_u}{i+1..*}{\ceiling{\lg k}+1} = \lpiece{D_u}{i+1..*}{\ceiling{\lg k}+1} + (\tto^{\ceiling{\lg k}}\ttl)^{k-i}.
+\]
+
+最后，考虑选择排名为 $r$ 的键的问题。这递归地完成，从根开始。当我们在节点 $u$ 时，我们寻找最大的 $i$ 使得 $N_u[i] < r$。然后设置 $r = r - N_u[i]$，并从 $u$ 的子节点 $i$ 继续搜索。为找到这个子节点索引 $i$，我们采用 Dietz~\cite{dietz89sums} 的一个巧妙技巧，当 $u$ 的高度 $h \geq 2$ 时有效。我们使用 $M_u$ 作为 $N_u$ 的良好近似（$M_u$ 不经常变化）。我们维护一个数组 $Q_u$，对于每个 $j \in [k]$，存储最大的索引 $i' = Q[j]$ 使得 $M_u[i'] < j k^{h-1}/4^h$。那么正确的索引 $i$ 与 $i' = Q_u[r \cdot 4^h/k^{h-1}]$ 最多相差 $5$，因此我们可以穷举检查 $10$ 个相关索引 $i$。维护 $Q_u$ 是容易的，因为我们以轮转方式每次只改变一个 $M_u[j]$，最多影响常数个 $Q_u[j]$。对于高度为 $1$ 的节点，我们不需要做任何事；因为子节点就是叶子键，所以 select $r$ 只需返回索引为 $r$ 的子节点。
+
+这就完成了我们的动态融合树的描述，支持 rank、select 和前驱搜索，以及更新，全部在 $O(\log n/\log w)$ 时间内完成。
+
+% ======================================================================
+\section{下界}\label{sec:lower}
+% ======================================================================
+
+首先我们注意到，动态 cell-probe 下界成立，无论可用空间有多少。简单的论点是：如果我们从一个空集开始，以每个元素 $O(\log n)$ 平摊时间插入 $n$ 个元素，那么使用完美哈希，我们可以构造一个 $O(n\log n)$ 空间的数据结构，它可以在常数时间内根据插入的整数给出所有已写入 cell 的内容。在整数插入之前所做的任何预处理都是通用常数，这对 cell-probe 查询者是``已知的''。因此，下一个动态查询的代价可以由使用 $O(n \log n)$ 空间的静态数据结构匹配。
+
+我们声称 Fredman 和 Saks~\cite{fredman89cellprobe} 为动态 rank 和 select 提供了 $\Omega(\log n/\log w)$ 的下界。两者都通过从\textbf{动态前缀奇偶性（dynamic prefix parity）}归约得到：我们有一个包含 $n$ 位的数组 $B$，初始全为零。更新操作翻转位 $i$，查询操作询问前 $j$ 位的异或值。根据~\cite[Theorem 3]{fredman89cellprobe}，对于 $\log n \leq w$，平摊操作时间为 $\Omega(\log n/\log w)$。
+
+\subsection{Rank}
+
+Fredman 和 Saks 提到，rank 的下界可以通过一个简单的归约得到：只需考虑动态集合 $S \subseteq [n]$，其中 $i \in S$ 当且仅当 $B[i] = 1$。因此当我们设置 $B[i]$ 时向 $S$ 添加 $i$，当取消设置 $B[i]$ 时从 $S$ 删除 $i$。$B[0, \dots, j]$ 的前缀奇偶性就是 $S$ 中 $j$ 的排名的奇偶性。
+
+\subsection{Select}
+
+我们对 select 的归约稍微复杂一些。假设 $n$ 可被 $2$ 整除。对于动态 select，我们考虑一个来自 $[n(n+1)]$ 的整数动态集合 $S$，初始化为集合 $S_0$，包含整数：
+\[
+S_0 = \{i(n+1) + j + 1 \mid i, j \in [n]\}.
+\]
+我们令前缀奇偶性中的位 $B[i]$ 对应于整数 $i(n+1) \in S$。当我们要查询 $B[0, \dots, j]$ 的前缀奇偶性时，我们设 $y = \SELECT((j+1)n - 1)$。如果 $B[0, \dots, j]$ 中有 $r$ 个设置位，则 $y = (j+1)(n+1) - 1 - r$，因此我们可以从 $y$ 计算出 $r$。
+
+为理解上述归约的合法性，注意插入 $S_0$（一个固定常数）没有帮助。虽然动态 select 的数据结构在插入 $S_0$ 时可以做功，但这在 cell-probe 模型中没有价值，因为 $S_0$ 是一个固定常数，在 cell-probe 中，如果这是有用的，它可以被前缀奇偶性数据结构免费模拟。
+
+\subsection{Predecessor}
+
+具有对数更新时间的动态前驱的查询时间不能优于使用多项式空间的静态前驱的查询时间，Beame 和 Fich~\cite[定理3.6及第3.1--2节的归约]{beame02pred} 对此证明了 $\Omega(\log n/\log w)$ 的下界（如果 $\log n/\log w = O(\log(w/\log n)/\log\log(w/\log n))$）。但这个条件等价于 $\log n/\log w = O(\log w/\log\log w)$。为理解该等价性，注意如果 $w \geq \log^2 n$，则 $\log(w/\log n) = \Theta(\log w)$；如果 $w \leq \log^2 n$，两种形式的条件都满足。Sen 和 Vankatesh~\cite{sen08roundelim} 证明了下界即使在允许随机化的情况下也成立。
+
+% ======================================================================
+\section{最优随机化动态前驱}\label{sec:ran-pred}
+% ======================================================================
+
+从~\cite{patrascu06pred,patrascu07randpred} 我们知道，给定键长 $\ell$ 和字长 $w$，使用 $\tilde O(n)$ 空间对 $n$ 个键进行静态前驱搜索的最优（随机化）查询时间在常数因子内为：
+\[
+\max\left\{1,\min \left\{ \begin{array}{l}
+  \dfrac{\log n}{\log w} \\[2ex]
+  \dfrac{\log \frac{\ell}{\log w}}{\log \left( \log \frac{\ell}{\log w}
+    \textrm{\large~/} \log\frac{\log n}{\log w} \right)} \\[4ex]
+  \log \dfrac{\ell - \lg n}{\log w}
+\end{array} \right\}\right\}.
+\]
+这也是我们在具有对数更新时间的动态情况下可以期望的最佳界，因为我们可以使用动态数据结构来构建静态数据结构——只需插入 $n$ 个键。然而，在引言中，我们实际上将最后一个分支 $\log \frac{\ell - \lg n}{\log w}$ 替换成了更高的界 $\log \frac{\log(2^\ell-n)}{\log w}$。为了从静态下界得到这个改进，我们这样做：首先注意我们可以假设 $\log n \geq \ell/2$，否则界是相同的。现在设 $n' = \sqrt{2^\ell-n} < n$ 且 $\ell' = \floor{\lg (2^\ell-n)}$。对于规模为 $n'$ 的集合 $S' \subseteq [2^{\ell'}]$，使用 $\tilde O(n')$ 空间，静态下界说明查询时间为 $\Omega(\log \frac{\ell' - \lg n'}{\log w}) = \Omega(\log \frac{\log(2^\ell-n)}{\log w})$。为了动态创建这样的数据结构，首先在预备步骤中，对于 $i = 1, \dots, n-n'$，插入键 $2^\ell-i$。我们尚未插入来自 $[2^{\ell'}]$ 的任何键。现在插入来自 $S'$ 的键。只有在我们开始插入 $S'$ 之后写入的 $\tilde O(|S'|)$ 个 cell 才携带关于 $S'$ 的信息。之前写入的所有内容被视为通用常数，不计入 cell-probe 模型。新写入的 cell 及其地址构成了 $S'$ 的近乎线性空间表示，适用于 $\Omega(\log \frac{\ell' - \lg n'}{\log w}) = \Omega(\log \frac{\log(2^\ell-n)}{\log w})$ 的静态 cell-probe 下界。
+
+本文的主要结果是顶部的 $O(\log n/\log w)$ 分支是可以达到的。本质上，这是如果我们允许随机化时动态前驱搜索所缺失的动态界。
+
+仔细考察~\cite{patrascu06pred} 完整版第5节，我们看到下面两个分支在动态情况下相当容易实现——如果我们使用具有常数期望更新和查询时间的随机化哈希表（或者具有常数查询时间和常数平摊期望更新时间的哈希表~\cite{dietzfel94dph}）。最后一个分支是 van Emde Boas 的数据结构~\cite{vEB77pred,Mehlhorn90boas}，做一些简单的调优。这包括 Willard~\cite{willard83pred} 的节省空间的 Y-fast trie，但在底部树中使用我们的动态融合节点，以便它们在常数时间内被搜索和更新。这立即给出了 $O(\log \frac{\ell}{\log w})$ 的界。改进到 $O(\log \frac{\log(2^\ell-n)}{\log w})$ 是通过观察到：对于存储的每个键，两个邻居的距离至多为 $\Delta = 2^\ell - n$。这反过来意味着 van Emde 数据结构在长度为 $\ell - \ell'$ 的前缀处进行递归调用，其中 $\ell' = 2^{\lceil\lg\lg \Delta\rceil}$。所有这些前缀都将被存储，对于查询键，我们可以查找 $\ell - \ell'$ 位前缀并从那里开始递归，然后在 $O(\log \frac{\ell'}{\log w}) = O(\log \frac{\log(2^\ell-n)}{\log w})$ 时间内完成搜索。
+
+为实现中间部分，我们遵循~\cite[完整版，第5.5.2节]{patrascu06pred} 的小空间静态构造。对于特定参数 $q$ 和 $h$，\cite{patrascu06pred} 使用一个特殊数据结构（\cite[完整版，Lemma 20]{patrascu06pred}，基于~\cite{beame02pred}），使用 $O(q^{2h})$ 空间，这也是构造时间。他们使用 $q = n^{1/(4h)}$ 以获得 $O(\sqrt n)$ 空间和构造时间。该特殊数据结构仅当一个规模为 $\Theta(n/q) = \Theta(n^{1-1/(4h)})$ 的子问题规模变化一个常数因子时才需要改变，这意味着 $O(\sqrt n)$ 的构造时间被平摊为每次键更新的亚常数时间。这类似于指数搜索树~\cite{andersson07exptrees} 背后的计算，我们可以使用相同的去平摊化。除了特殊表之外，每个节点需要像上面讨论的 van Emde Boas 数据结构那样的常规哈希表。
+
+对于具体的参数选择，我们在底部应用动态融合节点以获得每个键 $O(w)$ 的自由空间。然后，如~\cite{patrascu06pred} 中：
+\[
+h = \frac{\lg \frac {\ell}a}{\lg\frac{\lg n}{a}} \left/ \lg \frac{\lg \frac {\ell}a}{\lg\frac{\lg n}{a}}\right.
+\quad \text{其中} \quad a = \lg w.
+\]
+这产生了所需的递归深度：
+\[
+O\left(\frac{\lg \frac {\ell}{\lg w}}{\lg h}+h\lg\frac{\lg n}{\lg w}\right)=
+O\left(\frac{\log \frac{\ell}{\log w}}{\log \left( \log \frac{\ell}{\log w}
+    \textrm{\large~/} \log\frac{\log n}{\log w} \right)}\right).
+\]
+
+% ======================================================================
+\subsection*{致谢}
+% ======================================================================
+
+感谢 Djamal Belazzougui 指出本文早期版本中前驱搜索的一个界的错误。
+
+% ======================================================================
+% Bibliography
+% ======================================================================
+\newcommand{\etalchar}[1]{$^{#1}$}
+\begin{thebibliography}{vEBKZ77}
+
+\bibitem[AFK84]{ajtai84hashing}
+Mikl\'{o}s Ajtai, Michael~L. Fredman, and J{\'a}nos Koml{\'o}s.
+\newblock Hash functions for priority queues.
+\newblock {\em Information and Control}, 63(3):217--225, 1984.
+\newblock See also FOCS'83.
+
+\bibitem[AMT99]{andersson99fusion}
+Arne Andersson, Peter~Bro Miltersen, and Mikkel Thorup.
+\newblock Fusion trees can be implemented with {$AC^0$} instructions only.
+\newblock {\em Theoretical Computer Science}, 215(1-2):337--344, 1999.
+
+\bibitem[AT07]{andersson07exptrees}
+Arne Andersson and Mikkel Thorup.
+\newblock Dynamic ordered sets with exponential search trees.
+\newblock {\em Journal of the ACM}, 54(3), 2007.
+\newblock See also FOCS'96, STOC'00.
+
+\bibitem[BF02]{beame02pred}
+Paul Beame and Faith~E. Fich.
+\newblock Optimal bounds for the predecessor problem and related problems.
+\newblock {\em Journal of Computer and System Sciences}, 65(1):38--72, 2002.
+\newblock See also STOC'99.
+
+\bibitem[Com30]{Com29}
+L.~J. Comrie.
+\newblock The hollerith and powers tabulating machines.
+\newblock {\em Trans. Office Machinary Users' Assoc., Ltd}, pages 25--37, 1929-30.
+
+\bibitem[CR73]{CookR73}
+Stephen~A. Cook and Robert~A. Reckhow.
+\newblock Time bounded random access machines.
+\newblock {\em Journal of Computer and System Sciences}, 7(4):354--375, 1973.
+
+\bibitem[Die89]{dietz89sums}
+Paul~F. Dietz.
+\newblock Optimal algorithms for list indexing and subset rank.
+\newblock In {\em Proc. 1st Workshop on Algorithms and Data Structures (WADS)}, pages 39--46, 1989.
+
+\bibitem[DKM{\etalchar{+}}94]{dietzfel94dph}
+Martin Dietzfelbinger, Anna Karlin, Kurt Mehlhorn, Friedhelm~Meyer auf~der Heide, Hans Rohnert, and Robert~E. Tarjan.
+\newblock Dynamic perfect hashing: Upper and lower bounds.
+\newblock {\em SIAM Journal on Computing}, 23(4):738--761, 1994.
+\newblock See also FOCS'88.
+
+\bibitem[Dum56]{Dum56}
+A.~I. Dumey.
+\newblock Indexing for rapid random access memory systems.
+\newblock {\em Computers and Automation}, 5(12):6--9, 1956.
+
+\bibitem[Fre60]{fredkin60trie}
+Edward Fredkin.
+\newblock Trie memory.
+\newblock {\em Communications of the ACM}, 3(9):490--499, 1960.
+
+\bibitem[FS89]{fredman89cellprobe}
+Michael~L. Fredman and Michael~E. Saks.
+\newblock The cell probe complexity of dynamic data structures.
+\newblock In {\em Proc. 21st ACM Symposium on Theory of Computing (STOC)}, pages 345--354, 1989.
+
+\bibitem[FW93]{fredman93fusion}
+Michael~L. Fredman and Dan~E. Willard.
+\newblock Surpassing the information theoretic bound with fusion trees.
+\newblock {\em Journal of Computer and System Sciences}, 47(3):424--436, 1993.
+\newblock See also STOC'90.
+
+\bibitem[FW94]{fredman94atomic}
+Michael~L. Fredman and Dan~E. Willard.
+\newblock Trans-dichotomous algorithms for minimum spanning trees and shortest paths.
+\newblock {\em Journal of Computer and System Sciences}, 48(3):533--551, 1994.
+\newblock See also FOCS'90.
+
+\bibitem[GORR09]{grossi09succinct}
+Roberto Grossi, Alessio Orlandi, Rajeev Raman, and S.~Srinivasa Rao.
+\newblock More haste, less waste: Lowering the redundancy in fully indexable dictionaries.
+\newblock In {\em Proc. 26th Symposium on Theoretical Aspects of Computer Science (STACS)}, pages 517--528, 2009.
+
+\bibitem[KR78]{KR78}
+B.W. Kernighan and D.M. Ritchie.
+\newblock {\em The C Programming Language}.
+\newblock Prentice Hall, 1978.
+
+\bibitem[KR84]{KR84}
+D.~Kirkpatrick and S.~Reisch.
+\newblock Upper bounds for sorting integers on random access machines.
+\newblock {\em Theoretical Computer Science}, 28:263--276, 1984.
+
+\bibitem[MN90]{Mehlhorn90boas}
+Kurt Mehlhorn and Stefan N{\"a}her.
+\newblock Bounded ordered dictionaries in {O}(log log n) time and {O}(n) space.
+\newblock {\em Inf. Process. Lett.}, 35(4):183--189, 1990.
+
+\bibitem[Mor68]{morrison68patricia}
+Donald~R. Morrison.
+\newblock {PATRICIA} - practical algorithm to retrieve information coded in alphanumeric.
+\newblock {\em Journal of the ACM}, 15(4):514--534, 1968.
+
+\bibitem[PD04]{patrascu04connect}
+Mihai P{\v a}tra{\c s}cu and Erik~D. Demaine.
+\newblock Lower bounds for dynamic connectivity.
+\newblock In {\em Proc. 36th ACM Symposium on Theory of Computing (STOC)}, pages 546--553, 2004.
+
+\bibitem[PS82]{PS82}
+W.~J. Paul and J.~Simon.
+\newblock Decision trees and random access machines.
+\newblock In {\em Logic and Algorithmic: An International Symposium Held in Honour of Ernst Specker}, pages 331--340. L'Enseignement Math\'ematique, Universit\'e de Genev\`e, 1982.
+
+\bibitem[PT06]{patrascu06pred}
+Mihai P\v{a}tra\c{s}cu and Mikkel Thorup.
+\newblock Time-space trade-offs for predecessor search.
+\newblock In {\em Proc. 38th ACM Symposium on Theory of Computing (STOC)}, pages 232--240, 2006.
+\newblock Full version: {\texttt{http://arxiv.org/abs/cs/0603043}}.
+
+\bibitem[PT07]{patrascu07randpred}
+Mihai P\v{a}tra\c{s}cu and Mikkel Thorup.
+\newblock Randomization does not help searching predecessors.
+\newblock In {\em Proc. 18th ACM/SIAM Symposium on Discrete Algorithms (SODA)}, pages 555--564, 2007.
+
+\bibitem[SV08]{sen08roundelim}
+Pranab Sen and Srinivasan Venkatesh.
+\newblock Lower bounds for predecessor searching in the cell probe model.
+\newblock {\em Journal of Computer and System Sciences}, 74(3):364--385, 2008.
+\newblock See also ICALP'01, CCC'03.
+
+\bibitem[Tho03]{Tho03}
+Mikkel Thorup.
+\newblock On {AC$^0$} implementations of fusion trees and atomic heaps.
+\newblock In {\em Proc. 14th ACM/SIAM Symposium on Discrete Algorithms (SODA)}, pages 699--707, 2003.
+
+\bibitem[TY79]{tarjan79sparse}
+Robert~Endre Tarjan and Andrew Chi-Chih Yao.
+\newblock Storing a sparse table.
+\newblock {\em Communications of the ACM}, 22(11):606--611, 1979.
+
+\bibitem[vEBKZ77]{vEB77pred}
+Peter van Emde~Boas, R.~Kaas, and E.~Zijlstra.
+\newblock Design and implementation of an efficient priority queue.
+\newblock {\em Mathematical Systems Theory}, 10:99--127, 1977.
+\newblock Conference version by van Emde Boas alone in FOCS'75.
+
+\bibitem[Wil83]{willard83pred}
+Dan~E. Willard.
+\newblock Log-logarithmic worst-case range queries are possible in space {$\Theta ({N})$}.
+\newblock {\em Information Processing Letters}, 17(2):81--84, 1983.
+
+\bibitem[Wil00]{willard92fusion}
+Dan~E. Willard.
+\newblock Examining computational geometry, van {E}mde {B}oas trees, and hashing from the perspective of the fusion tree.
+\newblock {\em SIAM Journal on Computing}, 29(3):1030--1049, 2000.
+\newblock See also SODA'92.
+
+\bibitem[Yao81]{yao81tables}
+Andrew Chi-Chih Yao.
+\newblock Should tables be sorted?
+\newblock {\em Journal of the ACM}, 28(3):615--628, 1981.
+\newblock See also FOCS'78.
+
+\end{thebibliography}
+
+\end{document}
