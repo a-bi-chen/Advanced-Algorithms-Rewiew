@@ -1,0 +1,216 @@
+{
+  "main": {
+    "id": "44b107239b90e852",
+    "type": "split",
+    "children": [
+      {
+        "id": "47059b4b8cc494cf",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3cfd2de4f0703b19",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Review/Rewiew(Root).md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Rewiew(Root)"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "cddaa96b9156dbd8",
+    "type": "split",
+    "children": [
+      {
+        "id": "ec2036f53da8f58d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c15e6204a0d59466",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "fe4e675ca2519aea",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "5d64d8378fd3ebae",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "497a0e75904971f5",
+    "type": "split",
+    "children": [
+      {
+        "id": "ed8101f53a1e920b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2e664388eeb86699",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Review/Rewiew(Root).md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Rewiew(Root) 的反向链接列表"
+            }
+          },
+          {
+            "id": "f80250c33a2e0507",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Review/Rewiew(Root).md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Rewiew(Root) 的出链列表"
+            }
+          },
+          {
+            "id": "cdef9eabbbdac87c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "c2b5f1cca4f7db10",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "2cf91c83ddc91b7e",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Review/Rewiew(Root).md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Rewiew(Root) 的大纲"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "3cfd2de4f0703b19",
+  "lastOpenFiles": [
+    "Review/引理6证明.md",
+    "Review/放大旋转基数树.md",
+    "Review/引理3的证明.md",
+    "Review/预算旋转基数树.md",
+    "Review/Rewiew(Root).md",
+    "Review/证明汇总.md",
+    "Review/朴素生成a_s与b_s的开销.md",
+    "Review/附录A.md",
+    "Review/实现简洁性.md.tmp.6804.8507cea21e80",
+    "Review/附录A.md.tmp.6804.50d7dfb8ec71",
+    "Review/附录A.md.tmp.6804.4aced1c569d1",
+    "Review/实现简洁性.md.tmp.6804.5f3e1a13a250",
+    "Review/放大旋转基数树.md.tmp.6804.58e55010aa67",
+    "Review/数学概念与数据结构基础.md.tmp.6804.e660d0d4ba58",
+    "Review/附录A.md.tmp.6804.037fa59e2be8",
+    "ofn--上界最常用.md",
+    "Review/n叉基数树与旋转基数树.md",
+    "Review/旋转基数树的分析证明.md",
+    "Review/实现简洁性.md.tmp.6804.2aa2a0463b6c",
+    "Review/放大旋转基数树.md.tmp.6804.8969543b9832",
+    "Review/n叉基数树与旋转基数树.md.tmp.6804.9f4aa4f2332c",
+    "Review/实现简洁性.md",
+    "Review/数学工具.md",
+    "Review/分配到不同组的原因.md",
+    "Review/扇出缩小减少依赖关系.md",
+    "Review/数学概念与数据结构基础.md",
+    "Review/动态融合节点.md"
+  ]
+}
