@@ -49,8 +49,7 @@
               "title": "NULL"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -213,14 +212,15 @@
       "bases:新建数据库": false
     }
   },
-  "active": "aa064103f0ee9c86",
+  "active": "3588bea48a36899f",
   "lastOpenFiles": [
-    "A_Hash_Table_Without_Hash_Functions.md",
-    "NULL.md",
     "数学工具.md",
-    "动态融合节点.md",
-    "朴素做法中a_s和b_s的开销.md",
+    "A_Hash_Table_Without_Hash_Functions.md",
     "Rewiew(Root).md",
+    "NULL.md",
+    "引理6证明.md",
+    "朴素做法中a_s和b_s的开销.md",
+    "动态融合节点.md",
     "分配到不同组的原因.md",
     "未命名.md",
     "修改旋转基数树的意义以及原因.md",
