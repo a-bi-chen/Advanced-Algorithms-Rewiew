@@ -67,12 +67,16 @@
 \renewcommand{\theclaim}{\thelemma\Alph{claim}}
 
 % Proof environment
-\newenvironment{proofsk}{{\bf 证明（概要）:}}{\qed}
+\newenvironment{proofsk}{\textbf{证明（概要）:}}{\qed}
 
 % === Title Information ===
-\title{动态整数集合的最优排名、选择与前驱搜索\footnote{本文以不同格式发表在 {\em Proceedings of the 55nd IEEE Symposium on Foundations of Computer Science (FOCS)}, 2014, pp.~166--175.}}
-\author{Mihai P\u{a}tra\c{s}cu\footnote{于2012年去世。} \and Mikkel Thorup\footnote{研究部分由丹麦独立研究委员会根据 Sapere Aude 研究职业计划的高级资助金支持。}\\[2ex]
-哥本哈根大学}
+\title{动态整数集合的最优排名、选择与前驱搜索\thanks{本文以不同格式发表在 {\em Proceedings of the 55nd IEEE Symposium on Foundations of Computer Science (FOCS)}, 2014, pp.~166--175.}}
+\author{%
+Mihai P\u{a}tra\c{s}cu\thanks{于2012年去世。}%
+\and
+Mikkel Thorup\thanks{研究部分由丹麦独立研究委员会根据 Sapere Aude 研究职业计划的高级资助金支持。}\\[2ex]
+哥本哈根大学%
+}
 \date{}
 
 \begin{document}
@@ -434,7 +438,7 @@ Fredman 和 Willard 的压缩更为松散，允许压缩键在重要位之间有
 
 对于某个参数 $b$，我们将字划分为 $b$ 位的块。对于下面的构造，我们可以选择任何满足 $k^2 \leq b \leq w/k^2$ 的 $b$。我们将把重要位打包到一个 $2b$ 位的段中，因此较小的 $b$ 似乎有优势。然而，如果我们以后想要一个在 $k$ 不是常数时也能工作的统一算法，那么块的数量是 $k^{O(1)}$ 就很重要。因此我们选择最大的 $b = w/k^2$。
 
-我们寻找 $w/b$ 个移位值 $s_i < k^2/2$，使得没有两个移位后的块 $\lpiece{B}{i}{k^2} \LSHIFT s_i$ 在同一位置有设置位。打包后的键将是 $2b$ 位的段：
+我们寻找 $w/b$ 个移位值 $s_i < k^2/2$，使得没有两个移位后的块 $\lpiece{B}{i}{b} \LSHIFT s_i$ 在同一位置有设置位。打包后的键将是 $2b$ 位的段：
 \[
 \mu(x) = \sum_{i=0}^{w/b} \bigl(\lpiece{(x \AND B)}{i}{b} \LSHIFT s_i\bigr).
 \]
